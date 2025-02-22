@@ -1,0 +1,92 @@
+
+#############################
+## General Guidelines
+#############################
+- Follow clean coding principles with modular, DRY, and well-documented code.
+- Use a Git-based workflow with clear commit messages, systematic branching, and multi-environment (local → staging → production) strategies.
+- Keep all code and tests simple; avoid unnecessary complexity.
+
+#############################
+## Supabase Best Practices
+#############################
+- Utilize Supabase Auth for secure user authentication (email/password, OAuth, MFA).
+- Implement Row Level Security (RLS) on sensitive tables to restrict data access.
+- Manage schema changes with migration tools to ensure consistency.
+- Store API keys and secrets in environment variables—never hardcode them.
+- Optimize database performance with proper indexes, efficient queries, and caching strategies where applicable.
+
+#############################
+## Next.js Best Practices
+#############################
+- Use the Next.js App Router and server-side rendering (SSR) for critical pages.
+- Leverage dynamic imports and code splitting (next/dynamic) to optimize performance.
+- Optimize images using the Next.js Image component with responsive sizing and lazy loading.
+- Utilize middleware for app-wide authentication checks and session management.
+- Maintain a clear file and folder structure following Next.js routing and colocation guidelines.
+
+#############################
+## Security & Compliance
+#############################
+- Enforce the principle of least privilege when assigning user roles and restricting database access.
+- Use HTTPS and configure CORS properly to secure client-server communications.
+- Implement HTTP-only cookies with secure and SameSite attributes for session management.
+- Regularly audit and update dependencies, credentials, and secrets.
+
+#############################
+## Performance & User Experience
+#############################
+- Prioritize SSR for fast initial loads and use static generation (SSG) or incremental static regeneration (ISR) when appropriate.
+- Implement lazy loading for components and images and make use of code splitting to reduce bundle sizes.
+- Provide clear UI feedback such as loading spinners, notifications, and error boundaries.
+
+#############################
+## Testing & Maintenance
+#############################
+- Write unit tests, integration tests, and end-to-end tests for key components and APIs.
+- Keep tests simple and straightforward; never overcomplicate testing setups.
+- If tests fail three consecutive times, use MCP server tools to diagnose and resolve errors or consult for guidance.
+- Establish continuous monitoring, logging, and error tracking to maintain application health.
+- Integrate CI/CD pipelines to automate testing and deployments across all environments.
+
+#############################
+## Diagram Documentation (Mermaid)
+#############################
+- Use Mermaid syntax within fenced code blocks to create clear, concise diagrams for system workflows and architectural overviews.
+- Keep Mermaid diagrams simple to ensure they aid understanding without adding unnecessary complexity.
+- Example usage:
+```
+graph TD
+    A[Start] --> B[Process]
+    B --> C{Decision}
+    C -- Yes --> D[Action 1]
+    C -- No --> E[Action 2]
+```
+- Ensure any pages rendering Mermaid diagrams include the necessary script (e.g., via a CDN) for proper diagram generation.
+
+#############################
+## MCP Server Tools Integration
+#############################
+- Leverage MCP server tools extensively to optimize the buildout and streamline debugging.
+- If tests consistently fail three times, use MCP server tools to identify and resolve the issues; if problems persist, seek additional guidance.
+- Rely on MCP tools as a core part of your development process to quickly pinpoint and address errors.
+
+#############################
+## Deployment & Continuous Integration
+#############################
+- Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
+- Document deployment processes and rollback strategies to ensure reliability and reproducibility.
+
+#############################
+## Code Documentation & Commenting
+#############################
+- Write clear inline and block comments to explain complex logic.
+- Keep documentation up-to-date to facilitate onboarding and effective collaboration.
+
+#################################################
+# Customization and Expansion
+#################################################
+- Update these rules as project requirements evolve.
+- Ensure that new modules or features adhere to the established Supabase, Next.js, and general coding guidelines.
+- Review and refine these guidelines periodically to incorporate the latest best practices.
+```
+
