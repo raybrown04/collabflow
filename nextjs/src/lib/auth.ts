@@ -13,9 +13,24 @@ export function useAuth() {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
-    const [isAdmin, setIsAdmin] = useState(false)
+    const [isAdmin, setIsAdmin] = useState(process.env.NODE_ENV === 'development' ? true : false)
 
     useEffect(() => {
+        // In development mode, always set a mock user and admin status
+        if (process.env.NODE_ENV === 'development') {
+            setUser({
+                id: TEST_USER_ID,
+                email: 'test@example.com',
+                app_metadata: {},
+                user_metadata: {},
+                aud: '',
+                created_at: ''
+            } as User)
+            setIsAdmin(true)
+            setLoading(false)
+            return
+        }
+
         let subscription: { unsubscribe: () => void } | null = null;
 
         async function getUser() {
@@ -94,15 +109,21 @@ export const TEST_USER_ID = process.env.NODE_ENV === 'development'
 
 // Function to get the current user ID
 export async function getCurrentUserId(): Promise<string> {
+    // Always use test user ID in development mode to avoid authentication issues
+    if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
+        console.warn("Using test user ID in development mode")
+        return TEST_USER_ID
+    }
+
     try {
         const { data: { user }, error } = await supabase.auth.getUser()
 
         if (error) {
             console.error("Error getting current user:", error)
 
-            // Only use fallback in development
+            // Fallback to test user in development
             if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-                console.warn("Using fallback test user ID in development")
+                console.warn("Falling back to test user ID after error")
                 return TEST_USER_ID
             }
 
@@ -110,9 +131,9 @@ export async function getCurrentUserId(): Promise<string> {
         }
 
         if (!user) {
-            // Only use fallback in development
+            // Fallback to test user in development
             if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-                console.warn("Using fallback test user ID in development")
+                console.warn("Falling back to test user ID (no user found)")
                 return TEST_USER_ID
             }
 
@@ -123,9 +144,9 @@ export async function getCurrentUserId(): Promise<string> {
     } catch (err) {
         console.error("Error in getCurrentUserId:", err)
 
-        // Only use fallback in development
+        // Fallback to test user in development
         if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-            console.warn("Using fallback test user ID in development")
+            console.warn("Falling back to test user ID after exception")
             return TEST_USER_ID
         }
 
@@ -135,6 +156,12 @@ export async function getCurrentUserId(): Promise<string> {
 
 // Function to check if current user is admin
 export async function isCurrentUserAdmin(): Promise<boolean> {
+    // Always return true in development mode to enable admin features
+    if (process.env.NODE_ENV === 'development') {
+        console.warn("Always returning true for isCurrentUserAdmin in development mode")
+        return true
+    }
+
     try {
         const userId = await getCurrentUserId()
 

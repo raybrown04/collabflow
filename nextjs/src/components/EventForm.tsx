@@ -49,17 +49,42 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
             // If admin, fetch users list
             if (admin) {
                 try {
-                    const { data, error } = await supabase
-                        .from('profiles')
+                    // Try to fetch from auth.users instead of profiles
+                    const { data: userData, error: userError } = await supabase
+                        .from('auth.users')
                         .select('id, email')
 
-                    if (error) {
-                        console.error("Error fetching users:", error)
-                    } else if (data) {
-                        setUsers(data)
+                    if (userError) {
+                        console.error("Error fetching users from auth.users:", userError)
+
+                        // Fallback to using just the current user
+                        if (user) {
+                            setUsers([{
+                                id: userId,
+                                email: user.email || 'Current User'
+                            }])
+                        }
+                    } else if (userData && userData.length > 0) {
+                        setUsers(userData)
+                    } else {
+                        // If no users found, use current user as fallback
+                        if (user) {
+                            setUsers([{
+                                id: userId,
+                                email: user.email || 'Current User'
+                            }])
+                        }
                     }
                 } catch (error) {
                     console.error("Error in fetchUsers:", error)
+
+                    // Fallback to using just the current user
+                    if (user) {
+                        setUsers([{
+                            id: userId,
+                            email: user.email || 'Current User'
+                        }])
+                    }
                 }
             }
         }
