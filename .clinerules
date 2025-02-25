@@ -1,9 +1,8 @@
-
 #############################
 ## General Guidelines
 #############################
 - Follow clean coding principles with modular, DRY, and well-documented code.
-- Use a Git-based workflow with clear commit messages, systematic branching, and multi-environment (local → staging → production) strategies.
+- Use a Git-based workflow with clear commit messages, systematic branching, and multi-environment strategies (local → staging → production).
 - Keep all code and tests simple; avoid unnecessary complexity.
 
 #############################
@@ -12,7 +11,6 @@
 - Utilize Supabase Auth for secure user authentication (email/password, OAuth, MFA).
 - Implement Row Level Security (RLS) on sensitive tables to restrict data access.
 - Manage schema changes with migration tools to ensure consistency.
-- Store API keys and secrets in environment variables—never hardcode them.
 - Optimize database performance with proper indexes, efficient queries, and caching strategies where applicable.
 
 #############################
@@ -42,51 +40,64 @@
 #############################
 ## Testing & Maintenance
 #############################
-- Write unit tests, integration tests, and end-to-end tests for key components and APIs.
-- Keep tests simple and straightforward; never overcomplicate testing setups.
-- If tests fail three consecutive times, use MCP server tools to diagnose and resolve errors or consult for guidance.
-- Establish continuous monitoring, logging, and error tracking to maintain application health.
-- Integrate CI/CD pipelines to automate testing and deployments across all environments.
+- Write unit tests for individual functions, integration tests for API endpoints, and E2E tests for critical user flows.
+- Keep tests simple: each test should have a clear purpose and minimal setup.
+- If a test fails three consecutive times:
+  - Use the `memory/retrieve` tool to check if similar errors have been encountered before.
+  - If no solution is found, use `sequentialthinking/analyze` to break down the problem.
+  - If still unresolved, use `perplexity/search` to look for solutions online.
+- Store the error and its resolution in the memory graph using `memory/store` for future reference.
+- Set up continuous monitoring with logging and error tracking tools.
+- Use CI/CD pipelines to automate testing and deployments, ensuring consistency across environments.
 
 #############################
 ## Diagram Documentation (Mermaid)
 #############################
 - Use Mermaid syntax within fenced code blocks to create clear, concise diagrams for system workflows and architectural overviews.
+- Store complex or frequently used diagrams in the memory graph using `memory/store` for easy retrieval.
+- When referencing a diagram, use `memory/retrieve` to fetch and display it.
 - Keep Mermaid diagrams simple to ensure they aid understanding without adding unnecessary complexity.
 - Example usage:
-```
+```mermaid
 graph TD
     A[Start] --> B[Process]
     B --> C{Decision}
     C -- Yes --> D[Action 1]
     C -- No --> E[Action 2]
-```
-- Ensure any pages rendering Mermaid diagrams include the necessary script (e.g., via a CDN) for proper diagram generation.
+
+    Ensure any pages rendering Mermaid diagrams include the necessary script (e.g., via a CDN) for proper diagram generation.
 
 #############################
-## MCP Server Tools Integration
+MCP Server Tools Integration
 #############################
-- Leverage MCP server tools extensively to optimize the buildout and streamline debugging.
-- If tests consistently fail three times, use MCP server tools to identify and resolve the issues; if problems persist, seek additional guidance.
-- Rely on MCP tools as a core part of your development process to quickly pinpoint and address errors.
+Use the memory graph extensively:
+Store common error patterns and their solutions.
+Save optimized code snippets or design patterns.
+Keep track of successful test configurations.
+Use filesystem/read and filesystem/write to manage configuration files or logs.
+Use perplexity/search for researching coding problems or finding documentation.
+Use sequentialthinking/analyze for structured debugging or problem-solving.
+Use supabase/query to interact with the database for data-driven tests or validations.
+Use firecrawl/crawl to gather data from external sources if needed.
+Use browser-tools/automate for automating browser-based tests or tasks.
 
 #############################
-## Deployment & Continuous Integration
+Deployment & Continuous Integration
 #############################
-- Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
-- Document deployment processes and rollback strategies to ensure reliability and reproducibility.
+Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
+Document deployment processes and rollback strategies to ensure reliability and reproducibility.
 
 #############################
-## Code Documentation & Commenting
+Code Documentation & Commenting
 #############################
-- Write clear inline and block comments to explain complex logic.
-- Keep documentation up-to-date to facilitate onboarding and effective collaboration.
+Write clear inline comments for complex logic.
+Use block comments to explain the purpose of functions or modules.
+Store documentation templates or frequently used comments in the memory graph for consistency.
+When writing new documentation, check the memory graph for existing templates using memory/retrieve.
 
-#################################################
-# Customization and Expansion
-#################################################
-- Update these rules as project requirements evolve.
-- Ensure that new modules or features adhere to the established Supabase, Next.js, and general coding guidelines.
-- Review and refine these guidelines periodically to incorporate the latest best practices.
-```
-
+#############################
+Customization and Expansion
+#############################
+Update these rules as project requirements evolve.
+Ensure that new modules or features adhere to the established Supabase, Next.js, and general coding guidelines.
+Review and refine these guidelines periodically to incorporate the latest best practices.

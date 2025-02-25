@@ -1,0 +1,175 @@
+"use client"
+
+import { useState } from "react"
+import { useCreateEvent } from "@/hooks/useCalendarEvents"
+import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { Database } from "@/lib/database.types"
+import { getCurrentUserId } from "@/lib/auth"
+
+interface EventFormProps {
+    selectedDate: Date
+    onEventAdded: (event: EventData) => void
+}
+
+export interface EventData {
+    id: string
+    title: string
+    description: string | null
+    date: string
+    type: "meeting" | "task" | "reminder"
+    user_id: string
+    created_at: string
+}
+
+export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
+    const [isOpen, setIsOpen] = useState(false)
+    const [title, setTitle] = useState("")
+    const [description, setDescription] = useState("")
+    const [type, setType] = useState<"meeting" | "task" | "reminder">("meeting")
+    const [time, setTime] = useState("12:00")
+
+    const createEvent = useCreateEvent()
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        try {
+            // Create date with selected time
+            const [hours, minutes] = time.split(":").map(Number)
+            const eventDate = new Date(selectedDate)
+            eventDate.setHours(hours, minutes, 0, 0)
+
+            // Get the current user ID or fallback to a test ID if not authenticated
+            const userId = await getCurrentUserId()
+
+            // Create the event data
+            const eventData = {
+                title,
+                description: description || null,
+                date: eventDate.toISOString(),
+                type,
+                user_id: userId
+            }
+
+            // Call the create event mutation
+            createEvent.mutate(eventData, {
+                onSuccess: (newEvent) => {
+                    console.log("Event created successfully:", newEvent)
+
+                    // Reset form and close
+                    setTitle("")
+                    setDescription("")
+                    setType("meeting")
+                    setTime("12:00")
+                    setIsOpen(false)
+
+                    // Notify parent component with the new event
+                    onEventAdded(newEvent)
+                },
+                onError: (error) => {
+                    console.error("Error creating event:", error)
+                    alert(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                }
+            })
+        } catch (error) {
+            console.error("Error in event creation:", error)
+            alert("An error occurred. Please try again.")
+        }
+    }
+
+    if (!isOpen) {
+        return (
+            <Button
+                onClick={() => setIsOpen(true)}
+                className="w-full bg-primary hover:bg-primary/90"
+            >
+                Add Event
+            </Button>
+        )
+    }
+
+    return (
+        <div className="rounded-lg border p-4 shadow-md">
+            <h3 className="mb-4 text-lg font-medium">Add Event for {format(selectedDate, "MMMM d, yyyy")}</h3>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1">
+                        Title
+                    </label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full rounded-md border px-3 py-2"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1">
+                        Description
+                    </label>
+                    <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full rounded-md border px-3 py-2"
+                        rows={3}
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Type
+                        </label>
+                        <select
+                            value={type}
+                            onChange={(e) => setType(e.target.value as "meeting" | "task" | "reminder")}
+                            className="w-full rounded-md border px-3 py-2"
+                        >
+                            <option value="meeting">Meeting</option>
+                            <option value="task">Task</option>
+                            <option value="reminder">Reminder</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Time
+                        </label>
+                        <input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            className="w-full rounded-md border px-3 py-2"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2">
+                    <Button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        variant="outline"
+                        disabled={createEvent.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={createEvent.isPending}
+                    >
+                        {createEvent.isPending ? (
+                            <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                                <span>Saving...</span>
+                            </div>
+                        ) : "Save"}
+                    </Button>
+                </div>
+            </form>
+        </div>
+    )
+}
