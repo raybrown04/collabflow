@@ -57,7 +57,7 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
                             email: user?.email || 'Current User'
                         },
                         {
-                            id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+                            id: "test-user-id-123456789",
                             email: "test@example.com"
                         }
                     ])
