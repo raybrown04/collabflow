@@ -13,82 +13,7 @@ import { ChevronDown, ChevronUp, Calendar, ChevronLeft, ChevronRight, LogOut } f
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, supabase } from "@/lib/auth";
 
-// Temporary test data
-const today = startOfToday()
-const testEvents: Database['public']['Tables']['calendar_events']['Row'][] = [
-    {
-        id: "1",
-        title: "Team Standup",
-        date: addHours(today, 10).toISOString(),
-        description: "Daily team sync meeting",
-        type: "meeting",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4", // Use actual UUID format
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "2",
-        title: "Project Review",
-        date: addHours(today, 14).toISOString(),
-        description: "Q1 project progress review",
-        type: "meeting",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "3",
-        title: "Submit Report",
-        date: addHours(addDays(today, 1), 11).toISOString(),
-        description: null,
-        type: "task",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "4",
-        title: "Dentist Appointment",
-        date: addHours(addDays(today, 2), 15).toISOString(),
-        description: "Regular checkup",
-        type: "reminder",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "5",
-        title: "Baby Ray's Birthday Party",
-        date: addHours(addDays(today, 8), 11).toISOString(),
-        description: null,
-        type: "reminder",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "6",
-        title: "Shot",
-        date: addHours(addDays(today, 10), 12).toISOString(),
-        description: null,
-        type: "meeting",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "7",
-        title: "Urology Appt",
-        date: addHours(addDays(today, 10), 9.5).toISOString(),
-        description: null,
-        type: "task",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    },
-    {
-        id: "8",
-        title: "Dupixent Shot",
-        date: addHours(addDays(today, 10), 12).toISOString(),
-        description: null,
-        type: "reminder",
-        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-        created_at: new Date().toISOString()
-    }
-];
+// No need for test events here, they're defined in useCalendarEvents.ts
 
 export function SidebarRight() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -104,10 +29,10 @@ export function SidebarRight() {
     const { data: apiEvents, isLoading, error } = useCalendarEvents(selectedDate);
 
     // Use local events as a fallback if API fails due to authentication issues
-    const [localEvents, setLocalEvents] = useState<CalendarEvent[]>(testEvents);
+    const [localEvents, setLocalEvents] = useState<CalendarEvent[]>([]);
 
     // Determine which events to use - API events if available, otherwise local events
-    const events = apiEvents || localEvents;
+    const events = apiEvents || [];
 
     // Handle logout
     const handleLogout = async () => {

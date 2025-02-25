@@ -11,7 +11,7 @@ export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row
 const today = new Date()
 const testEvents: CalendarEvent[] = [
     {
-        id: "1",
+        id: "dev-1",
         title: "Team Standup",
         date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0).toISOString(),
         description: "Daily team sync meeting",
@@ -20,7 +20,7 @@ const testEvents: CalendarEvent[] = [
         created_at: new Date().toISOString()
     },
     {
-        id: "2",
+        id: "dev-2",
         title: "Project Review",
         date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 0).toISOString(),
         description: "Q1 project progress review",
@@ -29,7 +29,7 @@ const testEvents: CalendarEvent[] = [
         created_at: new Date().toISOString()
     },
     {
-        id: "3",
+        id: "dev-3",
         title: "Submit Report",
         date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 11, 0).toISOString(),
         description: null,
@@ -38,7 +38,7 @@ const testEvents: CalendarEvent[] = [
         created_at: new Date().toISOString()
     },
     {
-        id: "4",
+        id: "dev-4",
         title: "Dentist Appointment",
         date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 15, 0).toISOString(),
         description: "Regular checkup",
