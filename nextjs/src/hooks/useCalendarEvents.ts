@@ -7,7 +7,57 @@ import { supabase, getCurrentUserId, isCurrentUserAdmin } from "@/lib/auth"
 
 export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
 
+// Temporary test data for development mode
+const today = new Date()
+const testEvents: CalendarEvent[] = [
+    {
+        id: "1",
+        title: "Team Standup",
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0).toISOString(),
+        description: "Daily team sync meeting",
+        type: "meeting",
+        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "2",
+        title: "Project Review",
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 0).toISOString(),
+        description: "Q1 project progress review",
+        type: "meeting",
+        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "3",
+        title: "Submit Report",
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 11, 0).toISOString(),
+        description: null,
+        type: "task",
+        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "4",
+        title: "Dentist Appointment",
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 15, 0).toISOString(),
+        description: "Regular checkup",
+        type: "reminder",
+        user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+        created_at: new Date().toISOString()
+    }
+]
+
+// Check if we're in development mode
+const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
 async function fetchEventsForMonth(date: Date): Promise<CalendarEvent[]> {
+    // In development mode, return test events
+    if (isDevelopment) {
+        console.log("Development mode: Using test events")
+        return testEvents
+    }
+
     try {
         const start = startOfMonth(date)
         const end = endOfMonth(date)
@@ -41,11 +91,33 @@ async function fetchEventsForMonth(date: Date): Promise<CalendarEvent[]> {
         return data || []
     } catch (err) {
         console.error('Error in fetchEventsForMonth:', err)
+
+        // Fallback to test events in development mode if there's an error
+        if (isDevelopment) {
+            console.warn("Falling back to test events after error")
+            return testEvents
+        }
+
         throw err
     }
 }
 
 async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): Promise<CalendarEvent> {
+    // In development mode, create a mock event
+    if (isDevelopment) {
+        console.log("Development mode: Creating mock event", event)
+        const mockEvent: CalendarEvent = {
+            id: Math.random().toString(36).substring(2, 15),
+            created_at: new Date().toISOString(),
+            ...event
+        }
+
+        // Add to test events for display
+        testEvents.push(mockEvent)
+
+        return mockEvent
+    }
+
     try {
         // Validate that user_id is a valid UUID
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.user_id)) {
@@ -71,6 +143,22 @@ async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): Pro
 }
 
 async function updateEvent(event: Partial<CalendarEvent> & { id: string }): Promise<CalendarEvent> {
+    // In development mode, update a mock event
+    if (isDevelopment) {
+        console.log("Development mode: Updating mock event", event)
+
+        // Find the event in test events
+        const index = testEvents.findIndex(e => e.id === event.id)
+        if (index !== -1) {
+            // Update the event
+            const updatedEvent = { ...testEvents[index], ...event }
+            testEvents[index] = updatedEvent
+            return updatedEvent
+        }
+
+        throw new Error('Event not found')
+    }
+
     try {
         // Validate that user_id is a valid UUID if provided
         if (event.user_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.user_id)) {
@@ -97,6 +185,20 @@ async function updateEvent(event: Partial<CalendarEvent> & { id: string }): Prom
 }
 
 async function deleteEvent(id: string): Promise<void> {
+    // In development mode, delete a mock event
+    if (isDevelopment) {
+        console.log("Development mode: Deleting mock event", id)
+
+        // Remove the event from test events
+        const index = testEvents.findIndex(e => e.id === id)
+        if (index !== -1) {
+            testEvents.splice(index, 1)
+            return
+        }
+
+        throw new Error('Event not found')
+    }
+
     try {
         const { error } = await supabase
             .from('calendar_events')
