@@ -107,6 +107,13 @@ export interface Database {
         }
         Returns: string
       }
+      get_users: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          email: string
+        }[]
+      }
     }
     Enums: {
       auth_role: 'admin' | 'user'

@@ -48,14 +48,47 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
 
             // If admin, fetch users list
             if (admin) {
-                try {
-                    // Try to fetch from auth.users instead of profiles
-                    const { data: userData, error: userError } = await supabase
-                        .from('auth.users')
-                        .select('id, email')
+                // In development mode, always use the current user
+                if (process.env.NODE_ENV === 'development') {
+                    console.log("Development mode: Using mock users list")
+                    setUsers([
+                        {
+                            id: userId,
+                            email: user?.email || 'Current User'
+                        },
+                        {
+                            id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
+                            email: "test@example.com"
+                        }
+                    ])
+                } else {
+                    try {
+                        // Try to fetch users using an RPC function
+                        const { data: userData, error: userError } = await supabase.rpc('get_users')
 
-                    if (userError) {
-                        console.error("Error fetching users from auth.users:", userError)
+                        if (userError) {
+                            console.error("Error fetching users:", userError)
+
+                            // Fallback to using just the current user
+                            if (user) {
+                                setUsers([{
+                                    id: userId,
+                                    email: user.email || 'Current User'
+                                }])
+                            }
+                        } else if (userData && userData.length > 0) {
+                            setUsers(userData)
+                        } else {
+                            // If no users found, use current user as fallback
+                            if (user) {
+                                setUsers([{
+                                    id: userId,
+                                    email: user.email || 'Current User'
+                                }])
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error in fetchUsers:", error)
 
                         // Fallback to using just the current user
                         if (user) {
@@ -64,26 +97,6 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
                                 email: user.email || 'Current User'
                             }])
                         }
-                    } else if (userData && userData.length > 0) {
-                        setUsers(userData)
-                    } else {
-                        // If no users found, use current user as fallback
-                        if (user) {
-                            setUsers([{
-                                id: userId,
-                                email: user.email || 'Current User'
-                            }])
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error in fetchUsers:", error)
-
-                    // Fallback to using just the current user
-                    if (user) {
-                        setUsers([{
-                            id: userId,
-                            email: user.email || 'Current User'
-                        }])
                     }
                 }
             }
