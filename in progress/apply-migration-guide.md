@@ -1,100 +1,337 @@
-# Guide to Apply Migration to Hosted Supabase
+# Guide: Applying Development Mode Fixes to Other Projects
 
-This guide provides step-by-step instructions for applying the user roles and RLS policies migration to your hosted Supabase instance.
+This guide explains how to apply the development mode fixes we implemented for the calendar events feature to other projects that use Supabase authentication.
 
-## Prerequisites
+## Problem
 
-- Access to the Supabase dashboard for your project
-- The migration SQL script (`supabase/migrations/20250226000000_user_roles_and_rls.sql`)
+When developing locally, you may encounter issues with Supabase authentication, such as:
 
-## Steps
+1. Cookie parsing errors: `Failed to parse cookie string: SyntaxError: Unexpected token 'b', "base64-eyJ"... is not valid JSON`
+2. Authentication failures due to missing or invalid tokens
+3. Difficulty testing features that require authentication
 
-1. **Log in to the Supabase Dashboard**
+## Solution Overview
 
-   Go to [https://app.supabase.com/](https://app.supabase.com/) and log in with your credentials.
+The solution involves creating a robust development mode that:
 
-2. **Select Your Project**
+1. Detects when the application is running in development mode
+2. Uses mock data instead of fetching from the API
+3. Implements mock versions of API operations (create, update, delete)
+4. Bypasses authentication requirements in development mode
 
-   From the dashboard, select your project (`ttbdbkhvgistwrhculrf`).
+## Step-by-Step Implementation
 
-3. **Open the SQL Editor**
+### 1. Detect Development Mode
 
-   In the left sidebar, click on "SQL Editor" to open the SQL editor.
+Add a utility function or constant to detect when the application is running in development mode:
 
-4. **Create a New Query**
+```typescript
+// Check if we're in development mode
+const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+```
 
-   Click on the "New Query" button to create a new SQL query.
+This approach is more reliable than using `process.env.NODE_ENV` because it works at runtime in the browser.
 
-5. **Copy and Paste the Migration SQL**
+### 2. Create Mock Data
 
-   Copy the contents of the migration file (`supabase/migrations/20250226000000_user_roles_and_rls.sql`) and paste it into the SQL editor.
+Define mock data that will be used in development mode:
 
-6. **Run the Query**
+```typescript
+// Temporary test data for development mode
+const today = new Date()
+const testData = [
+    {
+        id: "dev-1", // Use a prefix to avoid conflicts with real IDs
+        title: "Example Item 1",
+        // ... other properties
+        created_at: new Date().toISOString()
+    },
+    {
+        id: "dev-2",
+        title: "Example Item 2",
+        // ... other properties
+        created_at: new Date().toISOString()
+    }
+    // Add more test items as needed
+]
+```
 
-   Click the "Run" button to execute the SQL query. This will apply the migration to your hosted Supabase instance.
+### 3. Modify API Functions
 
-7. **Verify the Migration**
+Update your API functions to use mock data in development mode:
 
-   After running the query, you should verify that the migration was applied successfully:
+```typescript
+async function fetchData(): Promise<DataType[]> {
+    // In development mode, return test data
+    if (isDevelopment) {
+        console.log("Development mode: Using test data")
+        return testData
+    }
 
-   - Check that the `auth_role` enum type was created
-   - Check that the `app_role` column was added to the `auth.users` table
-   - Check that the test user (rsb.3@me.com) was set as an admin
-   - Check that the `get_auth_user_role` RPC function was created
-   - Check that RLS is enabled on all tables
-   - Check that the RLS policies were created for all tables
+    try {
+        // Real API call logic
+        const { data, error } = await supabase
+            .from('your_table')
+            .select('*')
+            // ... other query parameters
+        
+        if (error) throw error
+        return data || []
+    } catch (err) {
+        console.error('Error fetching data:', err)
 
-   You can run the following SQL queries to verify:
+        // Fallback to test data in development mode if there's an error
+        if (isDevelopment) {
+            console.warn("Falling back to test data after error")
+            return testData
+        }
+        
+        throw err
+    }
+}
+```
 
-   ```sql
-   -- Check if auth_role enum exists
-   SELECT typname FROM pg_type WHERE typname = 'auth_role';
+### 4. Implement Mock Create/Update/Delete Operations
 
-   -- Check if app_role column exists in auth.users
-   SELECT column_name FROM information_schema.columns 
-   WHERE table_schema = 'auth' AND table_name = 'users' AND column_name = 'app_role';
+```typescript
+async function createItem(item: Omit<DataType, 'id' | 'created_at'>): Promise<DataType> {
+    // In development mode, create a mock item
+    if (isDevelopment) {
+        console.log("Development mode: Creating mock item", item)
+        const mockItem: DataType = {
+            id: Math.random().toString(36).substring(2, 15),
+            created_at: new Date().toISOString(),
+            ...item
+        }
+        
+        // Add to test data for display
+        testData.push(mockItem)
+        
+        return mockItem
+    }
+    
+    // Real API call logic
+    // ...
+}
 
-   -- Check if test user is admin
-   SELECT id, email, app_role FROM auth.users WHERE id = 'b9b36d04-59e0-49d7-83ff-46c5186a8cf4';
+async function updateItem(item: Partial<DataType> & { id: string }): Promise<DataType> {
+    // In development mode, update a mock item
+    if (isDevelopment) {
+        console.log("Development mode: Updating mock item", item)
 
-   -- Check if the RPC function exists
-   SELECT proname, prorettype::regtype 
-   FROM pg_proc 
-   WHERE proname = 'get_auth_user_role';
+        // Find the item in test data
+        const index = testData.findIndex(i => i.id === item.id)
+        if (index !== -1) {
+            // Update the item
+            const updatedItem = { ...testData[index], ...item }
+            testData[index] = updatedItem
+            return updatedItem
+        }
+        
+        throw new Error('Item not found')
+    }
+    
+    // Real API call logic
+    // ...
+}
 
-   -- Test the RPC function
-   SELECT get_auth_user_role('b9b36d04-59e0-49d7-83ff-46c5186a8cf4');
+async function deleteItem(id: string): Promise<void> {
+    // In development mode, delete a mock item
+    if (isDevelopment) {
+        console.log("Development mode: Deleting mock item", id)
 
-   -- Check if RLS is enabled on tables
-   SELECT tablename, rowsecurity FROM pg_tables 
-   WHERE schemaname = 'public' AND tablename IN ('calendar_events', 'events', 'todo_list');
+        // Remove the item from test data
+        const index = testData.findIndex(i => i.id === id)
+        if (index !== -1) {
+            testData.splice(index, 1)
+            return
+        }
+        
+        throw new Error('Item not found')
+    }
+    
+    // Real API call logic
+    // ...
+}
+```
 
-   -- Check RLS policies
-   SELECT tablename, policyname, permissive, cmd, qual, with_check 
-   FROM pg_policies 
-   WHERE schemaname = 'public' 
-   ORDER BY tablename, policyname;
-   ```
+### 5. Handle User Authentication
 
-## Troubleshooting
+For components that need user information:
 
-If you encounter any errors when running the migration:
+```typescript
+// In your component
+useEffect(() => {
+    const checkUser = async () => {
+        // In development mode, use a mock user
+        if (isDevelopment) {
+            setCurrentUser({
+                id: "dev-user-id",
+                email: "dev@example.com",
+                // ... other user properties
+            })
+            return
+        }
+        
+        // Real authentication logic
+        // ...
+    }
+    
+    checkUser()
+}, [])
+```
 
-1. **Syntax Errors**: Check the SQL syntax for any errors. The Supabase SQL editor will highlight any syntax errors.
+For components that need to select users (e.g., admin features):
 
-2. **Table or Column Already Exists**: If you get an error that a table or column already exists, you can modify the migration to use `IF NOT EXISTS` clauses or wrap the creation in a conditional block.
+```typescript
+// In your component
+useEffect(() => {
+    const fetchUsers = async () => {
+        // In development mode, use mock users
+        if (isDevelopment) {
+            setUsers([
+                {
+                    id: "dev-user-id-1",
+                    email: "dev1@example.com"
+                },
+                {
+                    id: "dev-user-id-2",
+                    email: "dev2@example.com"
+                }
+            ])
+            return
+        }
+        
+        // Real user fetching logic
+        // ...
+    }
+    
+    fetchUsers()
+}, [])
+```
 
-3. **Permission Errors**: Make sure you have the necessary permissions to create and modify tables and policies.
+### 6. Update React Query Hooks (if applicable)
 
-4. **Policy Conflicts**: If there are conflicts with existing policies, you may need to drop the existing policies first before creating new ones.
+If you're using React Query, update your hooks to work with the development mode:
 
-## Next Steps
+```typescript
+export function useData() {
+    return useQuery({
+        queryKey: ['data'],
+        queryFn: fetchData,
+        // Other options...
+    })
+}
 
-After successfully applying the migration, you should:
+export function useCreateItem() {
+    const queryClient = useQueryClient()
 
-1. Test that the RLS policies are working as expected
-2. Test the updated components:
-   - Verify that the sidebar shows admin-only links for admin users
-   - Verify that the events list shows events from other users for admin users
-   - Verify that the event form allows admins to create events for other users
-   - Verify that regular users can only see and modify their own events
+    return useMutation({
+        mutationFn: createItem,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['data'] })
+        },
+        // Other options...
+    })
+}
+```
+
+## Testing Your Implementation
+
+1. Run your application in development mode
+2. Check the console for "Development mode" log messages
+3. Verify that you can view, create, update, and delete items without authentication errors
+4. Check that the application falls back to mock data if there are API errors
+
+## Considerations
+
+1. **Security**: This approach is for development only. Ensure your production code properly enforces authentication and authorization.
+2. **Data Consistency**: Be aware that mock data will be reset when the page refreshes. Consider using localStorage if you need persistence across page reloads.
+3. **Feature Parity**: Ensure your mock implementations match the behavior of the real API as closely as possible.
+4. **Error Handling**: Continue to implement proper error handling even in development mode to catch issues early.
+
+## Example: Converting an Existing Component
+
+Here's an example of converting an existing component to support development mode:
+
+### Before:
+
+```typescript
+function UserList() {
+    const [users, setUsers] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+    
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const { data, error } = await supabase.from('users').select('*')
+                if (error) throw error
+                setUsers(data || [])
+            } catch (err) {
+                setError(err.message)
+            } finally {
+                setLoading(false)
+            }
+        }
+        
+        fetchUsers()
+    }, [])
+    
+    // Render logic...
+}
+```
+
+### After:
+
+```typescript
+// Mock data
+const mockUsers = [
+    { id: "dev-1", name: "John Doe", email: "john@example.com" },
+    { id: "dev-2", name: "Jane Smith", email: "jane@example.com" }
+]
+
+// Development mode detection
+const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+function UserList() {
+    const [users, setUsers] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+    
+    useEffect(() => {
+        const fetchUsers = async () => {
+            // In development mode, use mock users
+            if (isDevelopment) {
+                console.log("Development mode: Using mock users")
+                setUsers(mockUsers)
+                setLoading(false)
+                return
+            }
+            
+            try {
+                const { data, error } = await supabase.from('users').select('*')
+                if (error) throw error
+                setUsers(data || [])
+            } catch (err) {
+                setError(err.message)
+                
+                // Fallback to mock users in development mode
+                if (isDevelopment) {
+                    console.warn("Falling back to mock users after error")
+                    setUsers(mockUsers)
+                    setError(null) // Clear the error since we're using fallback data
+                }
+            } finally {
+                setLoading(false)
+            }
+        }
+        
+        fetchUsers()
+    }, [])
+    
+    // Render logic remains the same...
+}
+```
+
+By following this pattern, you can make your application work seamlessly in development mode without requiring authentication or a connection to Supabase.

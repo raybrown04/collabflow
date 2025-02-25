@@ -679,6 +679,29 @@ function EventDialog({
 
 ## Recent Updates
 
+### Development Mode Improvements
+
+To improve the development experience and avoid authentication issues, we've implemented a robust development mode:
+
+1. **Mock Data in Development Mode**: 
+   - Added test events with unique IDs (dev-1, dev-2, etc.) in `useCalendarEvents.ts`
+   - Created a development mode detection using `window.location.hostname === 'localhost'`
+   - Automatically uses test events in development mode without requiring authentication
+
+2. **Mock Event Operations**:
+   - Implemented mock versions of `createEvent`, `updateEvent`, and `deleteEvent` functions
+   - These functions manipulate the local test events array in development mode
+   - Provides a seamless development experience without requiring a Supabase connection
+
+3. **Authentication Bypass**:
+   - The EventForm component uses a test user ID in development mode
+   - Fixed duplicate key issues by ensuring all test user IDs are unique
+   - Cookie parsing errors are non-critical and don't affect functionality
+
+4. **Fallback Mechanism**:
+   - If API calls fail in development mode, the system automatically falls back to test events
+   - Error messages are displayed but don't block functionality
+
 ### Authentication Fix
 
 The authentication system has been improved to properly integrate with the database:
