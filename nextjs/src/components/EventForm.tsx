@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useCreateEvent } from "@/hooks/useCalendarEvents"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { Database } from "@/lib/database.types"
-import { getCurrentUserId } from "@/lib/auth"
+import { getCurrentUserId, useAuth, isCurrentUserAdmin } from "@/lib/auth"
+import { supabase } from "@/lib/auth"
 
 interface EventFormProps {
     selectedDate: Date
@@ -28,8 +29,43 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
     const [description, setDescription] = useState("")
     const [type, setType] = useState<"meeting" | "task" | "reminder">("meeting")
     const [time, setTime] = useState("12:00")
+    const [selectedUserId, setSelectedUserId] = useState<string>("")
+    const [users, setUsers] = useState<{ id: string, email: string }[]>([])
+    const [isAdmin, setIsAdmin] = useState(false)
 
+    const { user } = useAuth()
     const createEvent = useCreateEvent()
+
+    // Check if current user is admin
+    useEffect(() => {
+        const checkAdmin = async () => {
+            const admin = await isCurrentUserAdmin()
+            setIsAdmin(admin)
+
+            // Set default selected user to current user
+            const userId = await getCurrentUserId()
+            setSelectedUserId(userId)
+
+            // If admin, fetch users list
+            if (admin) {
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('id, email')
+
+                    if (error) {
+                        console.error("Error fetching users:", error)
+                    } else if (data) {
+                        setUsers(data)
+                    }
+                } catch (error) {
+                    console.error("Error in fetchUsers:", error)
+                }
+            }
+        }
+
+        checkAdmin()
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -40,8 +76,8 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
             const eventDate = new Date(selectedDate)
             eventDate.setHours(hours, minutes, 0, 0)
 
-            // Get the current user ID or fallback to a test ID if not authenticated
-            const userId = await getCurrentUserId()
+            // Get the user ID for the event
+            const userId = isAdmin && selectedUserId ? selectedUserId : await getCurrentUserId()
 
             // Create the event data
             const eventData = {
@@ -119,7 +155,7 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                     <div>
                         <label className="block text-sm font-medium mb-1">
                             Type
@@ -146,6 +182,25 @@ export function EventForm({ selectedDate, onEventAdded }: EventFormProps) {
                             className="w-full rounded-md border px-3 py-2"
                         />
                     </div>
+
+                    {isAdmin && (
+                        <div>
+                            <label className="block text-sm font-medium mb-1">
+                                User
+                            </label>
+                            <select
+                                value={selectedUserId}
+                                onChange={(e) => setSelectedUserId(e.target.value)}
+                                className="w-full rounded-md border px-3 py-2"
+                            >
+                                {users.map(user => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.email}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-2">

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useUpdateEvent, useDeleteEvent } from "@/hooks/useCalendarEvents"
-import { getCurrentUserId } from "@/lib/auth"
+import { getCurrentUserId, useAuth } from "@/lib/auth"
 
 type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
 
@@ -36,9 +36,10 @@ const typeColors = {
 interface EventCardProps {
     event: CalendarEvent
     onClick: (event: CalendarEvent) => void
+    isOwnedByCurrentUser: boolean
 }
 
-function EventCard({ event, onClick }: EventCardProps) {
+function EventCard({ event, onClick, isOwnedByCurrentUser }: EventCardProps) {
     const colors = typeColors[event.type]
     const eventDate = parseISO(event.date)
 
@@ -51,7 +52,14 @@ function EventCard({ event, onClick }: EventCardProps) {
                 <div className={`h-4 w-4 rounded-full ${colors.dot}`} />
                 <div className="flex-1">
                     <div className="flex items-start justify-between">
-                        <h4 className="font-medium">{event.title}</h4>
+                        <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{event.title}</h4>
+                            {!isOwnedByCurrentUser && (
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                    Other User
+                                </span>
+                            )}
+                        </div>
                         <time className="text-sm text-muted-foreground">
                             {format(eventDate, "h:mm a")}
                         </time>
@@ -71,13 +79,16 @@ function EventDialog({
     event,
     isOpen,
     onClose,
-    onDelete
+    onDelete,
+    currentUserId
 }: {
     event: CalendarEvent | null
     isOpen: boolean
     onClose: () => void
     onDelete: (id: string) => void
+    currentUserId: string | null
 }) {
+    const isOwnedByCurrentUser = event && currentUserId === event.user_id
     const [isEditing, setIsEditing] = useState(false)
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
@@ -237,24 +248,35 @@ function EventDialog({
                         </>
                     ) : (
                         <>
-                            <Button
-                                variant="destructive"
-                                onClick={() => {
-                                    onDelete(event.id)
-                                    onClose()
-                                }}
-                            >
-                                Delete
-                            </Button>
-                            <div className="space-x-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setIsEditing(true)}
-                                >
-                                    Edit
-                                </Button>
-                                <Button onClick={onClose}>Close</Button>
-                            </div>
+                            {isOwnedByCurrentUser ? (
+                                <>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => {
+                                            onDelete(event.id)
+                                            onClose()
+                                        }}
+                                    >
+                                        Delete
+                                    </Button>
+                                    <div className="space-x-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setIsEditing(true)}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button onClick={onClose}>Close</Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-sm text-muted-foreground">
+                                        You cannot edit events created by other users
+                                    </div>
+                                    <Button onClick={onClose}>Close</Button>
+                                </>
+                            )}
                         </>
                     )}
                 </DialogFooter>
@@ -266,11 +288,13 @@ function EventDialog({
 function DayEvents({
     date,
     events,
-    onEventClick
+    onEventClick,
+    currentUserId
 }: {
     date: Date
     events: CalendarEvent[]
     onEventClick: (event: CalendarEvent) => void
+    currentUserId: string | null
 }) {
     const dayEvents = events
         .filter(event => isSameDay(parseISO(event.date), date))
@@ -292,6 +316,7 @@ function DayEvents({
                         key={event.id}
                         event={event}
                         onClick={onEventClick}
+                        isOwnedByCurrentUser={currentUserId === event.user_id}
                     />
                 ))}
             </div>
@@ -304,6 +329,22 @@ export function EventsList({ date, events }: EventsListProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const deleteEventMutation = useDeleteEvent()
+    const { user } = useAuth()
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+    // Get current user ID on component mount
+    useEffect(() => {
+        const fetchUserId = async () => {
+            try {
+                const userId = await getCurrentUserId()
+                setCurrentUserId(userId)
+            } catch (error) {
+                console.error("Error fetching current user ID:", error)
+            }
+        }
+
+        fetchUserId()
+    }, [])
 
     // Group events by date
     const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
@@ -375,6 +416,7 @@ export function EventsList({ date, events }: EventsListProps) {
                                 date={eventDate}
                                 events={events}
                                 onEventClick={handleEventClick}
+                                currentUserId={currentUserId}
                             />
                         </div>
                     ))
@@ -386,6 +428,7 @@ export function EventsList({ date, events }: EventsListProps) {
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
                 onDelete={handleDeleteEvent}
+                currentUserId={currentUserId}
             />
 
             {/* Loading indicators for mutations */}

@@ -38,15 +38,78 @@ export interface Database {
           user_id?: string
         }
       }
+      events: {
+        Row: {
+          event_id: string
+          title: string | null
+          description: string | null
+          event_date: string
+          user_id: string
+          created_at: string | null
+        }
+        Insert: {
+          event_id?: string
+          title?: string | null
+          description?: string | null
+          event_date: string
+          user_id: string
+          created_at?: string | null
+        }
+        Update: {
+          event_id?: string
+          title?: string | null
+          description?: string | null
+          event_date?: string
+          user_id?: string
+          created_at?: string | null
+        }
+      }
+      todo_list: {
+        Row: {
+          id: number
+          created_at: string
+          title: string
+          urgent: boolean
+          description: string | null
+          done: boolean
+          done_at: string | null
+          owner: string
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          title: string
+          urgent?: boolean
+          description?: string | null
+          done?: boolean
+          done_at?: string | null
+          owner: string
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          title?: string
+          urgent?: boolean
+          description?: string | null
+          done?: boolean
+          done_at?: string | null
+          owner?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_auth_user_role: {
+        Args: {
+          user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      auth_role: 'admin' | 'user'
     }
   }
 }

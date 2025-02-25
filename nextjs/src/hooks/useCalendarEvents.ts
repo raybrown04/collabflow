@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { startOfMonth, endOfMonth } from "date-fns"
 import { Database } from "@/lib/database.types"
-import { supabase, getCurrentUserId } from "@/lib/auth"
+import { supabase, getCurrentUserId, isCurrentUserAdmin } from "@/lib/auth"
 
 export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
 
@@ -15,13 +15,23 @@ async function fetchEventsForMonth(date: Date): Promise<CalendarEvent[]> {
         // Get the current user ID
         const userId = await getCurrentUserId()
 
-        const { data, error } = await supabase
+        // Check if user is admin
+        const isAdmin = await isCurrentUserAdmin()
+
+        // Build query
+        let query = supabase
             .from('calendar_events')
             .select('*')
-            .eq('user_id', userId)
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
             .order('date', { ascending: true })
+
+        // If not admin, filter by user_id
+        if (!isAdmin) {
+            query = query.eq('user_id', userId)
+        }
+
+        const { data, error } = await query
 
         if (error) {
             console.error('Error fetching events:', error)
