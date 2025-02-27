@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { format, isSameDay, parseISO } from "date-fns"
 import { Database } from "@/lib/database.types"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
+import { DroppableCalendarDay } from "./DroppableCalendarDay"
+import { useUpdateEventDate } from "@/hooks/useUpdateEventDate"
+import { useToast } from "@/components/ui/use-toast"
 
 type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
 
@@ -12,6 +16,7 @@ interface CalendarWidgetProps {
     selectedDate: Date
     onDateSelect: (date: Date) => void
     events: CalendarEvent[]
+    onEventDrop?: (event: CalendarEvent, newDate: Date) => void
 }
 
 const typeColors = {
@@ -20,8 +25,24 @@ const typeColors = {
     reminder: 'bg-amber-500'
 }
 
-export function CalendarWidget({ selectedDate, onDateSelect, events }: CalendarWidgetProps) {
-    console.log("CalendarWidget - events:", events);
+export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop }: CalendarWidgetProps) {
+    const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
+    const updateEventDateMutation = useUpdateEventDate()
+    const { toast } = useToast()
+
+    // Handle event drop on a date
+    const handleEventDrop = (event: CalendarEvent, newDate: Date) => {
+        if (onEventDrop) {
+            // Use the provided event drop handler
+            onEventDrop(event, newDate)
+        } else {
+            // Use the default event drop handler
+            updateEventDateMutation.mutate({
+                event,
+                newDate
+            })
+        }
+    }
 
     // Custom day content renderer
     function renderDay(day: Date) {
@@ -31,17 +52,15 @@ export function CalendarWidget({ selectedDate, onDateSelect, events }: CalendarW
             return isSame;
         });
 
-        console.log(`Day ${format(day, 'yyyy-MM-dd')} has ${dayEvents.length} events`);
-
         const uniqueTypes = [...new Set(dayEvents.map(event => event.type))];
-
         const isSelected = isSameDay(day, selectedDate);
 
         return (
-            <div className={cn(
-                "relative flex h-full w-full flex-col items-center justify-center",
-                isSelected && "rounded-full bg-primary text-primary-foreground"
-            )}>
+            <DroppableCalendarDay
+                day={day}
+                isSelected={isSelected}
+                onEventDrop={handleEventDrop}
+            >
                 <div className="text-center">{format(day, "d")}</div>
                 {dayEvents.length > 0 && (
                     <div className="absolute bottom-1 flex gap-0.5">
@@ -56,12 +75,12 @@ export function CalendarWidget({ selectedDate, onDateSelect, events }: CalendarW
                         ))}
                     </div>
                 )}
-            </div>
+            </DroppableCalendarDay>
         )
     }
 
     return (
-        <div className="rounded-lg border">
+        <div className="rounded-lg border mx-auto mb-4 bg-background shadow-sm" style={{ width: "calc(100% - 0.5rem)" }}>
             <DayPicker
                 mode="single"
                 month={selectedDate}
@@ -85,7 +104,7 @@ export function CalendarWidget({ selectedDate, onDateSelect, events }: CalendarW
                     head_cell: "text-muted-foreground rounded-none w-full font-normal text-[0.8rem] uppercase",
                     row: "flex w-full mt-0",
                     cell: "relative h-10 w-full p-0 text-center text-sm focus-within:relative focus-within:z-20",
-                    day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-full mx-auto",
+                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-full mx-auto",
                     day_outside: "opacity-50 cursor-default",
                     day_today: "bg-accent/50 text-accent-foreground",
                     day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",

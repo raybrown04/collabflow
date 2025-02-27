@@ -1,40 +1,43 @@
 "use client"
 
+/**
+ * AppLayout component
+ * 
+ * Main layout component for the application that includes the left sidebar, right sidebar,
+ * and the main content area with the DashboardHeader.
+ * 
+ * Changes:
+ * - Replaced the old header with the new DashboardHeader component
+ * - Added support for project-specific pages with isProjectPage and projectName props
+ */
+
 import { SidebarLeft } from "@/components/sidebar-left"
 import { SidebarRight } from "@/components/sidebar-right"
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+import { DashboardHeader } from "@/components/DashboardHeader"
 import {
     SidebarInset,
     SidebarProvider,
-    SidebarTrigger,
 } from "@/components/ui/sidebar"
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+interface AppLayoutProps {
+    children: React.ReactNode
+    isProjectPage?: boolean
+    projectName?: string
+}
+
+export default function AppLayout({
+    children,
+    isProjectPage = false,
+    projectName = ""
+}: AppLayoutProps) {
     return (
         <SidebarProvider>
             <SidebarLeft />
             <SidebarInset>
-                <header className="sticky top-0 flex h-14 shrink-0 items-center gap-2 bg-background">
-                    <div className="flex flex-1 items-center gap-2 px-3">
-                        <SidebarTrigger />
-                        <Separator orientation="vertical" className="mr-2 h-4" />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage className="line-clamp-1">
-                                        Project Management & Task Tracking
-                                    </BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </div>
-                </header>
+                <DashboardHeader
+                    isProjectPage={isProjectPage}
+                    projectName={projectName}
+                />
                 <div className="flex flex-1 flex-col gap-4 p-4">
                     {children}
                 </div>

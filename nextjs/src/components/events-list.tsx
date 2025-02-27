@@ -1,18 +1,31 @@
 "use client"
 
-import { format, isSameDay, parseISO, compareAsc, startOfDay } from "date-fns"
+import { format, isSameDay, parseISO, compareAsc, startOfDay, isEqual } from "date-fns"
 import { Database } from "@/lib/database.types"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { useInView } from "react-intersection-observer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useUpdateEvent, useDeleteEvent } from "@/hooks/useCalendarEvents"
+import { useUpdateEventDate } from "@/hooks/useUpdateEventDate"
 import { getCurrentUserId, useAuth } from "@/lib/auth"
+import { DraggableEventCard } from "./DraggableEventCard"
+import { VirtualizedEventsList } from "./VirtualizedEventsList"
 
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
+// Extend the base CalendarEvent type to include our new fields
+type CalendarEvent = Database['public']['Tables']['calendar_events']['Row'] & {
+    end_date?: string;
+    is_all_day?: boolean;
+    location?: string;
+    invitees?: string[];
+    recurrence_rule?: string;
+}
 
 interface EventsListProps {
     date: Date
     events: CalendarEvent[]
+    onVisibleDateChange?: (date: Date, fromUserScroll?: boolean) => void
+    scrollToDateRef?: React.RefObject<((date: Date) => void) | null>
 }
 
 const typeColors = {
@@ -33,48 +46,6 @@ const typeColors = {
     }
 }
 
-interface EventCardProps {
-    event: CalendarEvent
-    onClick: (event: CalendarEvent) => void
-    isOwnedByCurrentUser: boolean
-}
-
-function EventCard({ event, onClick, isOwnedByCurrentUser }: EventCardProps) {
-    const colors = typeColors[event.type]
-    const eventDate = parseISO(event.date)
-
-    return (
-        <div
-            className="relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md cursor-pointer"
-            onClick={() => onClick(event)}
-        >
-            <div className="flex items-center gap-3">
-                <div className={`h-4 w-4 rounded-full ${colors.dot}`} />
-                <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{event.title}</h4>
-                            {!isOwnedByCurrentUser && (
-                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                    Other User
-                                </span>
-                            )}
-                        </div>
-                        <time className="text-sm text-muted-foreground">
-                            {format(eventDate, "h:mm a")}
-                        </time>
-                    </div>
-                    {event.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {event.description}
-                        </p>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
-}
-
 function EventDialog({
     event,
     isOpen,
@@ -93,7 +64,28 @@ function EventDialog({
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [type, setType] = useState<"meeting" | "task" | "reminder">("meeting")
-    const [time, setTime] = useState("12:00")
+    const [startTime, setStartTime] = useState("12:00")
+    const [endTime, setEndTime] = useState("13:00")
+    const [isAllDay, setIsAllDay] = useState(false)
+    const [endDate, setEndDate] = useState<Date>(new Date())
+    const [location, setLocation] = useState("")
+    const [invitees, setInvitees] = useState<string[]>([])
+    const [inviteInput, setInviteInput] = useState("")
+
+    // Recurring event states
+    const [isRecurring, setIsRecurring] = useState(false)
+    const [recurrenceFrequency, setRecurrenceFrequency] = useState<"daily" | "weekly" | "monthly" | "yearly">("weekly")
+    const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+    const [recurrenceEndType, setRecurrenceEndType] = useState<"never" | "after" | "on">("never")
+    const [recurrenceCount, setRecurrenceCount] = useState(10)
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date>(() => {
+        // Default to 3 months from now
+        const date = new Date()
+        date.setMonth(date.getMonth() + 3)
+        return date
+    })
+    const [weeklyDays, setWeeklyDays] = useState<string[]>([])
+
     const updateEventMutation = useUpdateEvent()
 
     // Initialize form when event changes
@@ -103,7 +95,94 @@ function EventDialog({
             setTitle(event.title)
             setDescription(event.description || "")
             setType(event.type)
-            setTime(format(eventDate, "HH:mm"))
+            setStartTime(format(eventDate, "HH:mm"))
+
+            // Handle end date and time
+            if (event.end_date) {
+                const endDateTime = parseISO(event.end_date)
+                setEndDate(endDateTime)
+                setEndTime(format(endDateTime, "HH:mm"))
+            } else {
+                // Default to event date + 1 hour
+                const defaultEndDate = new Date(eventDate)
+                defaultEndDate.setHours(defaultEndDate.getHours() + 1)
+                setEndDate(defaultEndDate)
+                setEndTime(format(defaultEndDate, "HH:mm"))
+            }
+
+            // Handle all day flag
+            setIsAllDay(event.is_all_day || false)
+
+            // Handle location
+            setLocation(event.location || "")
+
+            // Handle invitees
+            setInvitees(event.invitees || [])
+
+            // Handle recurrence rule
+            if (event.recurrence_rule) {
+                setIsRecurring(true)
+
+                // Parse the RRULE string
+                const rule = event.recurrence_rule
+
+                // Extract frequency
+                const freqMatch = rule.match(/FREQ=([^;]+)/)
+                if (freqMatch && freqMatch[1]) {
+                    setRecurrenceFrequency(freqMatch[1].toLowerCase() as any)
+                }
+
+                // Extract interval
+                const intervalMatch = rule.match(/INTERVAL=([0-9]+)/)
+                if (intervalMatch && intervalMatch[1]) {
+                    setRecurrenceInterval(parseInt(intervalMatch[1]))
+                }
+
+                // Extract BYDAY for weekly recurrence
+                const bydayMatch = rule.match(/BYDAY=([^;]+)/)
+                if (bydayMatch && bydayMatch[1]) {
+                    setWeeklyDays(bydayMatch[1].split(','))
+                } else {
+                    // Default to the day of the event
+                    const dayOfWeek = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][eventDate.getDay()]
+                    setWeeklyDays([dayOfWeek])
+                }
+
+                // Extract COUNT or UNTIL for end date
+                const countMatch = rule.match(/COUNT=([0-9]+)/)
+                if (countMatch && countMatch[1]) {
+                    setRecurrenceEndType("after")
+                    setRecurrenceCount(parseInt(countMatch[1]))
+                } else {
+                    const untilMatch = rule.match(/UNTIL=([^;T]+)/)
+                    if (untilMatch && untilMatch[1]) {
+                        setRecurrenceEndType("on")
+                        // Parse the UNTIL date (YYYYMMDD format)
+                        const year = untilMatch[1].substring(0, 4)
+                        const month = untilMatch[1].substring(4, 6)
+                        const day = untilMatch[1].substring(6, 8)
+                        setRecurrenceEndDate(new Date(`${year}-${month}-${day}`))
+                    } else {
+                        setRecurrenceEndType("never")
+                    }
+                }
+            } else {
+                // Reset recurrence states if no rule
+                setIsRecurring(false)
+                setRecurrenceFrequency("weekly")
+                setRecurrenceInterval(1)
+                setRecurrenceEndType("never")
+                setRecurrenceCount(10)
+
+                // Set default end date to 3 months from now
+                const date = new Date()
+                date.setMonth(date.getMonth() + 3)
+                setRecurrenceEndDate(date)
+
+                // Set default weekly days to the day of the event
+                const dayOfWeek = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][eventDate.getDay()]
+                setWeeklyDays([dayOfWeek])
+            }
         }
     }, [event])
 
@@ -117,9 +196,60 @@ function EventDialog({
 
         try {
             // Create date with selected time
-            const [hours, minutes] = time.split(":").map(Number)
+            const [startHours, startMinutes] = startTime.split(":").map(Number)
             const updatedDate = new Date(eventDate)
-            updatedDate.setHours(hours, minutes, 0, 0)
+            updatedDate.setHours(startHours, startMinutes, 0, 0)
+
+            // Create end date with selected time
+            let endDateTime = null;
+            let startDateTime = updatedDate.toISOString();
+
+            if (isAllDay) {
+                // For all-day events, set the end time to 23:59:59
+                const eventEndDate = new Date(endDate);
+                eventEndDate.setHours(23, 59, 59, 0);
+                endDateTime = eventEndDate.toISOString();
+            } else {
+                const [endHours, endMinutes] = endTime.split(":").map(Number);
+                const eventEndDate = new Date(endDate);
+                eventEndDate.setHours(endHours, endMinutes, 0, 0);
+                endDateTime = eventEndDate.toISOString();
+            }
+
+            // Ensure start date is before end date
+            if (new Date(startDateTime) > new Date(endDateTime)) {
+                // Swap dates if end date is before start date
+                const temp = startDateTime;
+                startDateTime = endDateTime;
+                endDateTime = temp;
+            }
+
+            // Generate recurrence rule if recurring is enabled
+            let recurrenceRule = null;
+            if (isRecurring) {
+                // Build the RRULE string according to iCalendar format
+                let rule = `FREQ=${recurrenceFrequency.toUpperCase()};INTERVAL=${recurrenceInterval}`;
+
+                // Add BYDAY for weekly recurrence
+                if (recurrenceFrequency === "weekly" && weeklyDays.length > 0) {
+                    rule += `;BYDAY=${weeklyDays.join(",")}`;
+                } else if (recurrenceFrequency === "weekly") {
+                    // If no days selected, use the day of the selected date
+                    const dayOfWeek = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][updatedDate.getDay()];
+                    rule += `;BYDAY=${dayOfWeek}`;
+                }
+
+                // Add COUNT or UNTIL for end date
+                if (recurrenceEndType === "after") {
+                    rule += `;COUNT=${recurrenceCount}`;
+                } else if (recurrenceEndType === "on") {
+                    // Format date as YYYYMMDD for UNTIL
+                    const untilDate = format(recurrenceEndDate, "yyyyMMdd");
+                    rule += `;UNTIL=${untilDate}T235959Z`;
+                }
+
+                recurrenceRule = rule;
+            }
 
             // Get the current user ID
             const userId = await getCurrentUserId()
@@ -130,8 +260,13 @@ function EventDialog({
                 title,
                 description: description || null,
                 type,
-                date: updatedDate.toISOString(),
-                user_id: userId
+                date: startDateTime,
+                end_date: endDateTime,
+                is_all_day: isAllDay,
+                location: location || null,
+                invitees: invitees.length > 0 ? invitees : null,
+                user_id: userId,
+                recurrence_rule: recurrenceRule
             }
 
             // Call the update mutation
@@ -163,7 +298,7 @@ function EventDialog({
                 </DialogHeader>
 
                 {isEditing ? (
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                         <div>
                             <label className="block text-sm font-medium mb-1">Title</label>
                             <input
@@ -185,6 +320,176 @@ function EventDialog({
                             />
                         </div>
 
+                        <div className="flex flex-wrap items-center gap-4 mb-4">
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="all-day-edit"
+                                    checked={isAllDay}
+                                    onChange={(e) => setIsAllDay(e.target.checked)}
+                                    className="mr-2 h-4 w-4"
+                                />
+                                <label htmlFor="all-day-edit" className="text-sm font-medium">
+                                    All day
+                                </label>
+                            </div>
+
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="recurring-edit"
+                                    checked={isRecurring}
+                                    onChange={(e) => setIsRecurring(e.target.checked)}
+                                    className="mr-2 h-4 w-4"
+                                />
+                                <label htmlFor="recurring-edit" className="text-sm font-medium">
+                                    Recurring
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Recurring event options */}
+                        {isRecurring && (
+                            <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+                                <h4 className="font-medium">Recurrence Options</h4>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                            Frequency
+                                        </label>
+                                        <select
+                                            value={recurrenceFrequency}
+                                            onChange={(e) => setRecurrenceFrequency(e.target.value as any)}
+                                            className="w-full rounded-md border px-3 py-2"
+                                        >
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="yearly">Yearly</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                            Every
+                                        </label>
+                                        <div className="flex items-center">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="99"
+                                                value={recurrenceInterval}
+                                                onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                                                className="w-20 rounded-md border px-3 py-2"
+                                            />
+                                            <span className="ml-2">
+                                                {recurrenceFrequency === "daily" && "day(s)"}
+                                                {recurrenceFrequency === "weekly" && "week(s)"}
+                                                {recurrenceFrequency === "monthly" && "month(s)"}
+                                                {recurrenceFrequency === "yearly" && "year(s)"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {recurrenceFrequency === "weekly" && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            Repeat on
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((day, index) => (
+                                                <button
+                                                    key={day}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (weeklyDays.includes(day)) {
+                                                            setWeeklyDays(weeklyDays.filter(d => d !== day));
+                                                        } else {
+                                                            setWeeklyDays([...weeklyDays, day]);
+                                                        }
+                                                    }}
+                                                    className={`w-8 h-8 rounded-full text-xs font-medium ${weeklyDays.includes(day)
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted text-muted-foreground"
+                                                        }`}
+                                                >
+                                                    {day.substring(0, 1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Ends
+                                    </label>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center">
+                                            <input
+                                                type="radio"
+                                                id="never-end-edit"
+                                                name="recurrence-end-edit"
+                                                checked={recurrenceEndType === "never"}
+                                                onChange={() => setRecurrenceEndType("never")}
+                                                className="mr-2 h-4 w-4"
+                                            />
+                                            <label htmlFor="never-end-edit" className="text-sm">
+                                                Never
+                                            </label>
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <input
+                                                type="radio"
+                                                id="end-after-edit"
+                                                name="recurrence-end-edit"
+                                                checked={recurrenceEndType === "after"}
+                                                onChange={() => setRecurrenceEndType("after")}
+                                                className="mr-2 h-4 w-4"
+                                            />
+                                            <label htmlFor="end-after-edit" className="text-sm mr-2">
+                                                After
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="999"
+                                                value={recurrenceCount}
+                                                onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
+                                                className="w-20 rounded-md border px-3 py-2"
+                                                disabled={recurrenceEndType !== "after"}
+                                            />
+                                            <span className="ml-2">occurrence(s)</span>
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <input
+                                                type="radio"
+                                                id="end-on-edit"
+                                                name="recurrence-end-edit"
+                                                checked={recurrenceEndType === "on"}
+                                                onChange={() => setRecurrenceEndType("on")}
+                                                className="mr-2 h-4 w-4"
+                                            />
+                                            <label htmlFor="end-on-edit" className="text-sm mr-2">
+                                                On
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={format(recurrenceEndDate, "yyyy-MM-dd")}
+                                                onChange={(e) => setRecurrenceEndDate(new Date(e.target.value))}
+                                                className="rounded-md border px-3 py-2"
+                                                disabled={recurrenceEndType !== "on"}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Type</label>
@@ -199,15 +504,92 @@ function EventDialog({
                                 </select>
                             </div>
 
+                            {!isAllDay && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Start Time</label>
+                                    <input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="w-full rounded-md border px-3 py-2"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium mb-1">Time</label>
+                                <label className="block text-sm font-medium mb-1">End Date</label>
                                 <input
-                                    type="time"
-                                    value={time}
-                                    onChange={(e) => setTime(e.target.value)}
+                                    type="date"
+                                    value={format(endDate, "yyyy-MM-dd")}
+                                    onChange={(e) => setEndDate(new Date(e.target.value))}
                                     className="w-full rounded-md border px-3 py-2"
                                 />
                             </div>
+                            {!isAllDay && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">End Time</label>
+                                    <input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="w-full rounded-md border px-3 py-2"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Location</label>
+                            <input
+                                type="text"
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                className="w-full rounded-md border px-3 py-2"
+                                placeholder="Add location"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Invitees</label>
+                            <div className="flex">
+                                <input
+                                    type="email"
+                                    value={inviteInput}
+                                    onChange={(e) => setInviteInput(e.target.value)}
+                                    className="flex-1 rounded-l-md border px-3 py-2"
+                                    placeholder="Add email address"
+                                />
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        if (inviteInput && !invitees.includes(inviteInput)) {
+                                            setInvitees([...invitees, inviteInput]);
+                                            setInviteInput("");
+                                        }
+                                    }}
+                                    className="rounded-l-none"
+                                >
+                                    Add
+                                </Button>
+                            </div>
+                            {invitees.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {invitees.map((email, index) => (
+                                        <div key={index} className="flex items-center bg-muted px-2 py-1 rounded-md text-sm">
+                                            {email}
+                                            <button
+                                                type="button"
+                                                onClick={() => setInvitees(invitees.filter((_, i) => i !== index))}
+                                                className="ml-2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -217,9 +599,26 @@ function EventDialog({
                                 {format(eventDate, "EEEE, MMMM d, yyyy")}
                             </div>
                             <div className="text-sm font-medium">
-                                {format(eventDate, "h:mm a")}
+                                {event.is_all_day ? (
+                                    <span>All day</span>
+                                ) : (
+                                    <span>{format(eventDate, "h:mm a")}</span>
+                                )}
                             </div>
                         </div>
+
+                        {/* Show end date if it exists and is different from start date */}
+                        {event.end_date && !isSameDay(parseISO(event.date), parseISO(event.end_date)) && (
+                            <div className="text-sm">
+                                <div className="font-medium mb-1">End Date</div>
+                                <p className="text-muted-foreground">
+                                    {format(parseISO(event.end_date), "EEEE, MMMM d, yyyy")}
+                                    {!event.is_all_day && (
+                                        <span> at {format(parseISO(event.end_date), "h:mm a")}</span>
+                                    )}
+                                </p>
+                            </div>
+                        )}
 
                         {event.description && (
                             <div className="text-sm">
@@ -232,6 +631,94 @@ function EventDialog({
                             <div className="font-medium mb-1">Type</div>
                             <p className="text-muted-foreground capitalize">{event.type}</p>
                         </div>
+
+                        {event.location && (
+                            <div className="text-sm">
+                                <div className="font-medium mb-1">Location</div>
+                                <p className="text-muted-foreground">{event.location}</p>
+                            </div>
+                        )}
+
+                        {event.invitees && event.invitees.length > 0 && (
+                            <div className="text-sm">
+                                <div className="font-medium mb-1">Invitees</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {event.invitees.map((email, index) => (
+                                        <div key={index} className="bg-muted px-2 py-1 rounded-md text-xs text-muted-foreground">
+                                            {email}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {event.recurrence_rule && (
+                            <div className="text-sm">
+                                <div className="font-medium mb-1">Recurrence</div>
+                                <p className="text-muted-foreground">
+                                    {(() => {
+                                        const rule = event.recurrence_rule;
+                                        let recurrenceText = "";
+
+                                        // Extract frequency
+                                        const freqMatch = rule.match(/FREQ=([^;]+)/);
+                                        if (freqMatch && freqMatch[1]) {
+                                            const freq = freqMatch[1].toLowerCase();
+
+                                            // Extract interval
+                                            const intervalMatch = rule.match(/INTERVAL=([0-9]+)/);
+                                            const interval = intervalMatch && intervalMatch[1] ? parseInt(intervalMatch[1]) : 1;
+
+                                            // Build frequency text
+                                            if (freq === "daily") {
+                                                recurrenceText = interval === 1 ? "Daily" : `Every ${interval} days`;
+                                            } else if (freq === "weekly") {
+                                                recurrenceText = interval === 1 ? "Weekly" : `Every ${interval} weeks`;
+
+                                                // Add days for weekly recurrence
+                                                const bydayMatch = rule.match(/BYDAY=([^;]+)/);
+                                                if (bydayMatch && bydayMatch[1]) {
+                                                    const days = bydayMatch[1].split(",");
+                                                    const dayNames = {
+                                                        "SU": "Sunday",
+                                                        "MO": "Monday",
+                                                        "TU": "Tuesday",
+                                                        "WE": "Wednesday",
+                                                        "TH": "Thursday",
+                                                        "FR": "Friday",
+                                                        "SA": "Saturday"
+                                                    };
+                                                    const daysList = days.map(d => dayNames[d as keyof typeof dayNames]).join(", ");
+                                                    recurrenceText += ` on ${daysList}`;
+                                                }
+                                            } else if (freq === "monthly") {
+                                                recurrenceText = interval === 1 ? "Monthly" : `Every ${interval} months`;
+                                            } else if (freq === "yearly") {
+                                                recurrenceText = interval === 1 ? "Yearly" : `Every ${interval} years`;
+                                            }
+
+                                            // Add end information
+                                            const countMatch = rule.match(/COUNT=([0-9]+)/);
+                                            if (countMatch && countMatch[1]) {
+                                                recurrenceText += `, ${countMatch[1]} times`;
+                                            } else {
+                                                const untilMatch = rule.match(/UNTIL=([^;T]+)/);
+                                                if (untilMatch && untilMatch[1]) {
+                                                    // Parse the UNTIL date (YYYYMMDD format)
+                                                    const year = untilMatch[1].substring(0, 4);
+                                                    const month = untilMatch[1].substring(4, 6);
+                                                    const day = untilMatch[1].substring(6, 8);
+                                                    const untilDate = new Date(`${year}-${month}-${day}`);
+                                                    recurrenceText += `, until ${format(untilDate, "MMMM d, yyyy")}`;
+                                                }
+                                            }
+                                        }
+
+                                        return recurrenceText || "Recurring event";
+                                    })()}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -289,34 +776,53 @@ function DayEvents({
     date,
     events,
     onEventClick,
-    currentUserId
+    currentUserId,
+    onInView,
+    onDragStart,
+    onDragEnd
 }: {
     date: Date
     events: CalendarEvent[]
     onEventClick: (event: CalendarEvent) => void
     currentUserId: string | null
+    onInView?: (date: Date, inView: boolean) => void
+    onDragStart?: (event: CalendarEvent) => void
+    onDragEnd?: () => void
 }) {
-    const dayEvents = events
-        .filter(event => isSameDay(parseISO(event.date), date))
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+    // Set up intersection observer for this date section with a lower threshold for smoother scrolling
+    const { ref, inView } = useInView({
+        threshold: 0.3, // Lower threshold for more responsive detection
+        onChange: (inView) => {
+            if (onInView) {
+                onInView(date, inView);
+            }
+        }
+    });
 
-    if (dayEvents.length === 0) return null
+    // Sort events by time
+    const sortedEvents = [...events].sort((a, b) =>
+        parseISO(a.date).getTime() - parseISO(b.date).getTime()
+    );
+
+    if (sortedEvents.length === 0) return null
 
     return (
-        <div className="space-y-4 mb-8">
+        <div ref={ref} className="space-y-4 mb-8">
             <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold">
                     {format(date, "d")} {format(date, "EEEE")}
                 </h3>
-                <span className="text-sm text-muted-foreground">{dayEvents.length} events</span>
+                <span className="text-sm text-muted-foreground">{sortedEvents.length} events</span>
             </div>
             <div className="space-y-3">
-                {dayEvents.map(event => (
-                    <EventCard
+                {sortedEvents.map(event => (
+                    <DraggableEventCard
                         key={event.id}
                         event={event}
                         onClick={onEventClick}
                         isOwnedByCurrentUser={currentUserId === event.user_id}
+                        onDragStart={onDragStart ? () => onDragStart(event) : undefined}
+                        onDragEnd={onDragEnd}
                     />
                 ))}
             </div>
@@ -324,11 +830,13 @@ function DayEvents({
     )
 }
 
-export function EventsList({ date, events }: EventsListProps) {
+export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef }: EventsListProps) {
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
+    const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
+    const virtualizedListRef = useRef<HTMLDivElement>(null)
     const deleteEventMutation = useDeleteEvent()
+    const updateEventDateMutation = useUpdateEventDate()
     const { user } = useAuth()
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
@@ -346,20 +854,94 @@ export function EventsList({ date, events }: EventsListProps) {
         fetchUserId()
     }, [])
 
-    // Group events by date
-    const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
-        const dateStr = startOfDay(parseISO(event.date)).toISOString()
-        if (!acc[dateStr]) {
-            acc[dateStr] = []
-        }
-        acc[dateStr].push(event)
-        return acc
-    }, {})
+    // Handle event drag start
+    const handleEventDragStart = (event: CalendarEvent) => {
+        setDraggedEvent(event)
+    }
 
-    // Get unique dates that have events, sorted chronologically
-    const uniqueDates = Object.keys(eventsByDate)
-        .map(dateStr => new Date(dateStr))
-        .sort(compareAsc)
+    // Handle event drag end
+    const handleEventDragEnd = () => {
+        setDraggedEvent(null)
+    }
+
+    // Handle event drop on a date
+    const handleEventDrop = (event: CalendarEvent, newDate: Date) => {
+        // Only allow dropping if the event is owned by the current user
+        if (event.user_id !== currentUserId) return
+
+        // Update the event date
+        updateEventDateMutation.mutate({
+            event,
+            newDate
+        })
+    }
+
+    // Group events by date (using simple date string as key)
+    const eventsByDate = new Map<string, { date: Date, events: CalendarEvent[] }>();
+
+    // Process each event and group by date
+    events.forEach(event => {
+        const eventDate = parseISO(event.date);
+        // Create a simple date string (YYYY-MM-DD) as the key
+        const dateKey = format(eventDate, "yyyy-MM-dd");
+
+        if (!eventsByDate.has(dateKey)) {
+            eventsByDate.set(dateKey, {
+                date: startOfDay(eventDate),
+                events: []
+            });
+        }
+
+        eventsByDate.get(dateKey)?.events.push(event);
+    });
+
+    // Convert to array for easier manipulation
+    const datesWithEvents = Array.from(eventsByDate.values());
+
+    // Create a simple date string for the selected date
+    const selectedDateKey = format(date, "yyyy-MM-dd");
+
+    // Find if the selected date has events
+    const hasSelectedDateEvents = eventsByDate.has(selectedDateKey);
+
+    // Sort all dates chronologically
+    datesWithEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    // Track which date is currently visible at the top of the viewport
+    const [visibleTopDate, setVisibleTopDate] = useState<Date | null>(null);
+
+    // Helper function to find the closest date with events
+    const findClosestDateWithEvents = useCallback((targetDate: Date, dates: { date: Date, events: CalendarEvent[] }[]): Date | null => {
+        if (dates.length === 0) return null;
+
+        // Sort dates by absolute difference from target date
+        const sortedDates = [...dates].sort((a, b) => {
+            const diffA = Math.abs(a.date.getTime() - targetDate.getTime());
+            const diffB = Math.abs(b.date.getTime() - targetDate.getTime());
+            return diffA - diffB;
+        });
+
+        return sortedDates[0].date;
+    }, []);
+
+    // This function is no longer needed as we're using the VirtualizedEventsList component
+
+    // This effect is no longer needed as we're using the VirtualizedEventsList component
+
+    // This function is no longer needed as we're using the VirtualizedEventsList component
+
+    // Create a copy of the sorted dates for display
+    const orderedDates = [...datesWithEvents];
+
+    // Scroll to date when it changes
+    useEffect(() => {
+        if (virtualizedListRef.current && 'scrollToDate' in virtualizedListRef.current) {
+            const scrollToDateFn = (virtualizedListRef.current as any).scrollToDate;
+            if (typeof scrollToDateFn === 'function') {
+                scrollToDateFn(date);
+            }
+        }
+    }, [date]);
 
     // Handle event click
     const handleEventClick = (event: CalendarEvent) => {
@@ -381,46 +963,32 @@ export function EventsList({ date, events }: EventsListProps) {
         })
     }
 
-    // Scroll to the selected date when it changes
+    // Expose scrollToDate function via ref
     useEffect(() => {
-        if (scrollContainerRef.current) {
-            // Find the element for the selected date
-            const selectedDateStr = startOfDay(date).toISOString()
-            const dateElements = scrollContainerRef.current.querySelectorAll('[data-date]')
-
-            for (let i = 0; i < dateElements.length; i++) {
-                const el = dateElements[i]
-                if (el.getAttribute('data-date') === selectedDateStr) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    break
+        if (scrollToDateRef && 'current' in scrollToDateRef && virtualizedListRef.current) {
+            scrollToDateRef.current = (targetDate: Date) => {
+                if (virtualizedListRef.current && 'scrollToDate' in virtualizedListRef.current) {
+                    const scrollToDateFn = (virtualizedListRef.current as any).scrollToDate;
+                    if (typeof scrollToDateFn === 'function') {
+                        scrollToDateFn(targetDate);
+                    }
                 }
-            }
+            };
         }
-    }, [date])
+    }, [scrollToDateRef]);
 
     return (
         <div className="h-full flex flex-col">
-            <div
-                ref={scrollContainerRef}
-                className="space-y-4 overflow-y-auto flex-1 pr-2 h-full"
-                style={{ scrollbarWidth: 'thin' }}
-            >
-                {uniqueDates.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="text-muted-foreground">No events scheduled</p>
-                    </div>
-                ) : (
-                    uniqueDates.map(eventDate => (
-                        <div key={eventDate.toISOString()} data-date={startOfDay(eventDate).toISOString()}>
-                            <DayEvents
-                                date={eventDate}
-                                events={events}
-                                onEventClick={handleEventClick}
-                                currentUserId={currentUserId}
-                            />
-                        </div>
-                    ))
-                )}
+            <div className="flex-1 h-full" ref={virtualizedListRef}>
+                <VirtualizedEventsList
+                    events={events}
+                    currentUserId={currentUserId}
+                    onEventClick={handleEventClick}
+                    onVisibleDateChange={onVisibleDateChange}
+                    onDragStart={handleEventDragStart}
+                    onDragEnd={handleEventDragEnd}
+                    date={date} // Pass the selected date to ensure synchronization
+                />
             </div>
 
             <EventDialog
