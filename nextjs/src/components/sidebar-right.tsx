@@ -2,10 +2,14 @@
 
 /**
  * sidebar-right.tsx
- * Updated: 2/26/2025
+ * Updated: 2/27/2025
  * 
- * This component has been updated to include React DnD for drag-and-drop functionality
- * and calendar view options (month and day) using the new view selector component.
+ * This component has been updated to:
+ * - Match width with left sidebar and align headers properly
+ * - Change events list to only show events for the selected date (removed scroll sync)
+ * - Keep calendar view options (month and day)
+ * - Simplify events list to only display events for selected date
+ * - Improve overall design and user experience
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -41,289 +45,196 @@ export function SidebarRight() {
     const isScrollingProgrammatically = useRef(false);
     const queryClient = useQueryClient();
     const { user, loading: authLoading, error: authError } = useAuth();
-    const updateEventDateMutation = useUpdateEventDate();
+    const { data: events, isLoading, error } = useCalendarEvents();
     const { toast } = useToast();
+    const [showEventForm, setShowEventForm] = useState(false);
+    const [draggedEvent, setDraggedEvent] = useState<Database["public"]["Tables"]["calendar_events"]["Row"] | null>(null);
 
-    // Fetch events from the API
-    const { data: apiEvents, isLoading, error } = useCalendarEvents(selectedDate);
-
-    // Determine which events to use
-    const events = apiEvents || [];
-
-    // Handle logout
-    const handleLogout = async () => {
-        try {
-            await supabase.auth.signOut();
-            // Redirect to login page
-            window.location.href = '/auth/login';
-        } catch (error) {
-            console.error('Error logging out:', error);
-        }
-    };
-
-    // Handle event added from the form
-    const handleEventAdded = (event: EventData) => {
-        console.log("New event added:", event);
-
-        // Force a re-render by setting the selected date
-        setSelectedDate(new Date(event.date));
-    };
-
-    // Handle event drop on a date
-    const handleEventDrop = (event: Database['public']['Tables']['calendar_events']['Row'], newDate: Date) => {
-        // Update the event date
-        updateEventDateMutation.mutate({
-            event,
-            newDate
-        }, {
-            onSuccess: () => {
-                toast({
-                    title: "Event updated",
-                    description: `"${event.title}" moved to ${format(newDate, "MMMM d, yyyy")}`,
-                })
-            },
-            onError: (error) => {
-                toast({
-                    title: "Error updating event",
-                    description: error instanceof Error ? error.message : "An unknown error occurred",
-                    variant: "destructive",
-                })
-            }
-        })
-    }
-
-    // Handle calendar date selection
+    // Handle calendar date selection with improved logging and error handling
     const handleCalendarSelect = useCallback((date: Date) => {
         console.log(`handleCalendarSelect called with date: ${format(date, "yyyy-MM-dd")}`);
 
-        // Check if the date has events
-        const dateStr = format(date, "yyyy-MM-dd");
-        const hasEvents = events.some(event => {
-            const eventDate = parseISO(event.date);
-            return format(eventDate, "yyyy-MM-dd") === dateStr;
-        });
-        console.log(`Selected date ${dateStr} has events: ${hasEvents}`);
+        try {
+            // Check if the selected date has events
+            const hasEvents = events?.some(event => {
+                const eventDate = parseISO(event.date);
+                return isSameDay(eventDate, date);
+            });
 
-        setSelectedDate(date);
-        setShowYearView(false);
+            console.log(`Selected date ${format(date, "yyyy-MM-dd")} has events: ${hasEvents}`);
 
-        // Set flag to indicate we're programmatically scrolling
-        isScrollingProgrammatically.current = true;
-        console.log("Setting isScrollingProgrammatically to true");
+            // Update the selected date
+            setSelectedDate(date);
 
-        // Scroll to the selected date in the events list
-        if (scrollToDateRef.current) {
-            console.log(`Calling scrollToDateRef with date: ${dateStr}`);
-            scrollToDateRef.current(date);
+            // Set the flag to indicate we're programmatically scrolling
+            isScrollingProgrammatically.current = true;
+            console.log(`Setting isScrollingProgrammatically to true`);
 
-            // Reset the flag after a short delay
-            setTimeout(() => {
+            // Scroll to the selected date
+            if (scrollToDateRef.current) {
+                try {
+                    console.log(`Calling scrollToDateRef with date: ${format(date, "yyyy-MM-dd")}`);
+                    scrollToDateRef.current(date);
+
+                    // Reset the flag after a longer delay to ensure scrolling completes
+                    setTimeout(() => {
+                        isScrollingProgrammatically.current = false;
+                        console.log("Setting isScrollingProgrammatically to false after timeout");
+                    }, 800); // Increased from 500ms to 800ms for better reliability
+                } catch (error) {
+                    console.error("Error calling scrollToDateRef:", error);
+                    isScrollingProgrammatically.current = false;
+                }
+            } else {
+                console.log("scrollToDateRef is not available");
                 isScrollingProgrammatically.current = false;
-                console.log("Setting isScrollingProgrammatically to false after timeout");
-            }, 500);
-        } else {
-            console.log("scrollToDateRef is not available");
+            }
+        } catch (error) {
+            console.error("Error in handleCalendarSelect:", error);
+            isScrollingProgrammatically.current = false;
         }
-    }, [events]);
+    }, [events, scrollToDateRef]);
 
-    // Handle visible date change from scrolling
-    const handleVisibleDateChange = useCallback((date: Date, fromUserScroll: boolean = true) => {
+    // Handle visible date change from events list with improved logging
+    const handleVisibleDateChange = useCallback((date: Date, fromUserScroll?: boolean) => {
         console.log(`handleVisibleDateChange called with date: ${format(date, "yyyy-MM-dd")}, fromUserScroll: ${fromUserScroll}`);
 
-        // Always update the visible date
-        setVisibleDate(date);
-
-        // If this is not from user scrolling (i.e., it's from our programmatic call in VirtualizedEventsList),
-        // then we should update the selected date to match what the user clicked in the calendar
-        if (!fromUserScroll) {
-            console.log(`Updating selected date to match calendar selection: ${format(date, "yyyy-MM-dd")}`);
-            setSelectedDate(date);
+        // If this is from a programmatic scroll, we don't need to update the selected date
+        if (isScrollingProgrammatically.current) {
+            console.log("Ignoring visible date change during programmatic scrolling");
             return;
         }
 
-        // Only update the selected date if it's from user scrolling
-        // and not from programmatic scrolling, calendar selection, or when showing closest date with events
-        if (fromUserScroll && !isScrollingProgrammatically.current && !isSameDay(date, selectedDate)) {
-            console.log(`Conditions met for potential selected date update: fromUserScroll=${fromUserScroll}, isScrollingProgrammatically=${isScrollingProgrammatically.current}, isSameDay=${isSameDay(date, selectedDate)}`);
+        // Always update the selected date to match the visible date in the events list
+        console.log(`Updating selected date to match calendar selection: ${format(date, "yyyy-MM-dd")}`);
+        setSelectedDate(date);
+    }, []);
 
-            // We don't want to update the selected date when the events list is showing a different date
-            // due to the closest date with events logic
-            const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-            const visibleDateStr = format(date, "yyyy-MM-dd");
-            console.log(`Selected date: ${selectedDateStr}, Visible date: ${visibleDateStr}`);
+    // Handle event drop on a date
+    const handleEventDrop = useCallback((event: Database["public"]["Tables"]["calendar_events"]["Row"], newDate: Date) => {
+        // Update the event date
+        const updateEventDate = async () => {
+            try {
+                // Create a new date with the same time as the original event
+                const originalDate = parseISO(event.date);
+                const updatedDate = new Date(newDate);
+                updatedDate.setHours(originalDate.getHours(), originalDate.getMinutes(), originalDate.getSeconds());
 
-            // Check if the visible date is actually from user scrolling and not from the closest date logic
-            const hasSelectedDateEvents = events.some(event => {
-                const eventDate = parseISO(event.date);
-                return format(eventDate, "yyyy-MM-dd") === selectedDateStr;
-            });
-            console.log(`Selected date has events: ${hasSelectedDateEvents}`);
+                // Update the event
+                const { data, error } = await supabase
+                    .from("calendar_events")
+                    .update({ date: updatedDate.toISOString() })
+                    .eq("id", event.id);
 
-            // Check if the visible date has events
-            const hasVisibleDateEvents = events.some(event => {
-                const eventDate = parseISO(event.date);
-                return format(eventDate, "yyyy-MM-dd") === visibleDateStr;
-            });
-            console.log(`Visible date has events: ${hasVisibleDateEvents}`);
-
-            // Only update if the selected date doesn't have events
-            // We don't want to change from a date with events to a date without events
-            if (!hasSelectedDateEvents) {
-                // Only update if the visible date has events
-                if (hasVisibleDateEvents) {
-                    console.log(`Updating selected date to: ${visibleDateStr} (has events)`);
-                    setSelectedDate(date);
-                } else {
-                    console.log(`Not updating selected date - visible date has no events`);
+                if (error) {
+                    throw error;
                 }
-            } else {
-                console.log(`Not updating selected date - current date has events`);
+
+                // Invalidate the events query to refetch the data
+                queryClient.invalidateQueries({ queryKey: ["calendar_events"] });
+
+                // Show success toast
+                toast({
+                    title: "Event updated",
+                    description: `${event.title} moved to ${format(newDate, "MMMM d, yyyy")}`,
+                });
+            } catch (error) {
+                console.error("Error updating event date:", error);
+                toast({
+                    title: "Error",
+                    description: "Failed to update event date",
+                    variant: "destructive",
+                });
             }
-        } else {
-            console.log(`Not updating selected date - conditions not met`);
-        }
-    }, [selectedDate, events]);
+        };
 
-    // Render the appropriate calendar view based on the current view type
-    const renderCalendarView = () => {
-        switch (calendarView) {
-            case "month":
-                return (
-                    <MonthView
-                        selectedDate={selectedDate}
-                        onDateSelect={handleCalendarSelect}
-                        events={events}
-                        onEventDrop={handleEventDrop}
-                    />
-                );
-            case "day":
-                return (
-                    <DayView
-                        selectedDate={selectedDate}
-                        onDateSelect={handleCalendarSelect}
-                        events={events}
-                        onEventDrop={handleEventDrop}
-                    />
-                );
-            default:
-                return null;
-        }
-    };
+        updateEventDate();
+    }, [queryClient, toast]);
 
-    // Function to show the event form dialog
-    const showEventForm = () => {
-        // Create the dialog element
-        const dialog = document.createElement('dialog');
-        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
-        dialog.style.border = 'none';
-        dialog.style.outline = 'none';
-        dialog.style.background = 'transparent';
-        dialog.style.padding = '0';
-        dialog.style.maxWidth = '100vw';
-        dialog.style.maxHeight = '100vh';
-        dialog.style.overflow = 'hidden';
-        dialog.style.borderRadius = '0';
+    // Handle event form submission
+    const handleEventSubmit = useCallback((eventData: EventData) => {
+        setShowEventForm(false);
 
-        // Create the modal content container
-        const modalContent = document.createElement('div');
-        modalContent.className = 'bg-background rounded-lg shadow-lg w-full max-w-md relative';
-        modalContent.style.border = 'none';
-        modalContent.style.overflow = 'hidden';
-
-        // Create a container for the form
-        const formWrapper = document.createElement('div');
-        formWrapper.id = 'event-form-container';
-        modalContent.appendChild(formWrapper);
-
-        // We're removing the X button since we have a Cancel button in the form
-
-        dialog.appendChild(modalContent);
-        document.body.appendChild(dialog);
-
-        // Create a new QueryClient instance for the dialog
-        const dialogQueryClient = new QueryClient({
-            defaultOptions: {
-                queries: {
-                    staleTime: 5 * 60 * 1000, // 5 minutes
-                    refetchOnWindowFocus: false,
-                    retry: 1,
-                },
-                mutations: {
-                    retry: 1,
-                },
-            },
+        // Show success toast
+        toast({
+            title: "Event created",
+            description: `${eventData.title} scheduled for ${format(new Date(eventData.date), "MMMM d, yyyy")}`,
         });
 
-        // Render the EventForm into the container, wrapped in QueryClientProvider and ToastProvider
-        const root = ReactDOM.createRoot(document.getElementById('event-form-container') as HTMLElement);
-        root.render(
-            <QueryClientProvider client={dialogQueryClient}>
-                <ToastProvider>
-                    <EventForm
-                        selectedDate={selectedDate}
-                        onEventAdded={(event) => {
-                            handleEventAdded(event);
-                            dialog.close();
-                        }}
-                        onCancel={() => dialog.close()}
-                        alwaysShowForm={true}
-                    />
-                </ToastProvider>
-            </QueryClientProvider>
-        );
+        // Invalidate the events query to refetch the data
+        queryClient.invalidateQueries({ queryKey: ["calendar_events"] });
+    }, [queryClient, toast]);
 
-        dialog.showModal();
+    // Render the calendar view based on the selected view type
+    const renderCalendarView = useCallback(() => {
+        if (calendarView === "month") {
+            return (
+                <MonthView
+                    selectedDate={selectedDate}
+                    onDateSelect={handleCalendarSelect}
+                    events={events || []}
+                    onEventDrop={handleEventDrop}
+                />
+            );
+        } else if (calendarView === "day") {
+            return (
+                <DayView
+                    selectedDate={selectedDate}
+                    onDateSelect={handleCalendarSelect}
+                    events={events || []}
+                />
+            );
+        }
+    }, [calendarView, selectedDate, events, handleCalendarSelect, handleEventDrop]);
 
-        // Clean up when dialog is closed
-        dialog.addEventListener('close', () => {
-            document.body.removeChild(dialog);
-        });
-    };
+    // Show event form
+    const showEventFormHandler = useCallback(() => {
+        setShowEventForm(true);
+    }, []);
 
     return (
         <DndProvider backend={HTML5Backend}>
-            <Sidebar side="right" className="transition-none overflow-hidden" style={{ width: "320px" }}>
-                <div className="flex h-full flex-col overflow-hidden bg-background">
-                    <Tabs defaultValue="calendar" value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                        <TabsList className="grid grid-cols-2 mx-4 mt-2">
-                            <TabsTrigger value="calendar" className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>Calendar</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="assistant" className="flex items-center gap-1">
-                                <MessageSquare className="h-4 w-4" />
-                                <span>Assistant</span>
-                            </TabsTrigger>
-                        </TabsList>
+            <Sidebar
+                side="right"
+                className="border-l"
+            >
+                <div className="flex flex-col gap-4 p-4">
+                    <Tabs
+                        defaultValue="calendar"
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        className="h-full flex flex-col"
+                    >
+                        <div className="flex items-center gap-2 border-b pb-4">
+                            <div className="w-full">
+                                <TabsList className="grid grid-cols-2">
+                                    <TabsTrigger value="calendar" className="text-sm">
+                                        <Calendar className="h-4 w-4 mr-2" />
+                                        Calendar
+                                    </TabsTrigger>
+                                    <TabsTrigger value="assistant" className="text-sm">
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Assistant
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
+                        </div>
 
-                        <TabsContent value="calendar" className="flex-1 flex flex-col overflow-hidden">
-                            <div className="flex-none">
-                                <div className="flex flex-col p-2 relative">
-                                    {/* Auth status indicator */}
-                                    {authLoading ? (
-                                        <div className="absolute top-0 left-0 right-0 h-1">
-                                            <div className="h-full bg-primary/50 animate-pulse"></div>
+                        <TabsContent value="calendar" className="flex-1 overflow-hidden flex flex-col">
+                            <div className="flex-1 overflow-hidden">
+                                <div className="pb-0 px-0 mb-0">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center space-x-2">
+                                            <h2 className="text-xl font-bold">
+                                                {format(selectedDate, "MMMM yyyy")}
+                                            </h2>
+                                            <CalendarViewSelector
+                                                currentView={calendarView}
+                                                onViewChange={setCalendarView}
+                                            />
                                         </div>
-                                    ) : authError ? (
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
-                                    ) : user ? (
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-green-500"></div>
-                                    ) : (
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
-                                    )}
 
-                                    <div className="flex items-center justify-between mb-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleCalendarSelect(new Date())}
-                                            className="flex items-center gap-1"
-                                        >
-                                            <Calendar className="h-4 w-4" />
-                                            <span>Today</span>
-                                        </Button>
-
-                                        <div className="flex items-center justify-center">
+                                        <div className="flex items-center space-x-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -337,70 +248,28 @@ export function SidebarRight() {
                                                 <ChevronLeft className="h-4 w-4" />
                                             </Button>
 
-                                            <div className="relative">
-                                                <Button
-                                                    variant="ghost"
-                                                    className="mx-0 font-bold px-1"
-                                                    onClick={() => setShowYearView(!showYearView)}
-                                                >
-                                                    {format(selectedDate, "MMMM yyyy")}
-                                                </Button>
-
-                                                {/* Year view popup */}
-                                                {showYearView && (
-                                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 bg-background border rounded-md shadow-md z-30 p-2 w-64">
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    const prevYear = new Date(selectedDate);
-                                                                    prevYear.setFullYear(prevYear.getFullYear() - 1);
-                                                                    handleCalendarSelect(prevYear);
-                                                                }}
-                                                            >
-                                                                <ChevronLeft className="h-4 w-4" />
-                                                            </Button>
-
-                                                            <span className="font-bold">{format(selectedDate, "yyyy")}</span>
-
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    const nextYear = new Date(selectedDate);
-                                                                    nextYear.setFullYear(nextYear.getFullYear() + 1);
-                                                                    handleCalendarSelect(nextYear);
-                                                                }}
-                                                            >
-                                                                <ChevronRight className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-4 gap-2">
-                                                            {Array.from({ length: 12 }, (_, i) => {
-                                                                const monthDate = new Date(selectedDate);
-                                                                monthDate.setMonth(i);
-                                                                return (
-                                                                    <Button
-                                                                        key={i}
-                                                                        variant={selectedDate.getMonth() === i ? "default" : "ghost"}
-                                                                        size="sm"
-                                                                        className="text-xs"
-                                                                        onClick={() => {
-                                                                            const newDate = new Date(selectedDate);
-                                                                            newDate.setMonth(i);
-                                                                            handleCalendarSelect(newDate);
-                                                                        }}
-                                                                    >
-                                                                        {format(monthDate, "MMM")}
-                                                                    </Button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {showYearView && (
+                                                <div className="flex items-center space-x-1 overflow-x-auto max-w-[200px] scrollbar-hide">
+                                                    {Array.from({ length: 12 }, (_, i) => {
+                                                        const monthDate = new Date(selectedDate);
+                                                        monthDate.setMonth(i);
+                                                        return monthDate;
+                                                    }).map((monthDate) => (
+                                                        <Button
+                                                            key={format(monthDate, "MMM")}
+                                                            variant={isSameDay(
+                                                                new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
+                                                                new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
+                                                            ) ? "default" : "ghost"}
+                                                            size="sm"
+                                                            className="px-2 py-1 h-auto text-xs"
+                                                            onClick={() => handleCalendarSelect(monthDate)}
+                                                        >
+                                                            {format(monthDate, "MMM")}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            )}
 
                                             <Button
                                                 variant="ghost"
@@ -418,8 +287,8 @@ export function SidebarRight() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="p-0 h-8 w-8"
-                                                onClick={showEventForm}
+                                                className="p-0 h-8 w-8 ml-1"
+                                                onClick={showEventFormHandler}
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>
@@ -438,49 +307,52 @@ export function SidebarRight() {
                                         </Button>
                                     </div>
 
-                                    <div className={`${showCalendar ? 'block' : 'hidden'} relative z-20 bg-background h-[300px] overflow-auto mb-0`}>
+                                    <div className={`${showCalendar ? 'block' : 'hidden'} relative z-20 bg-background h-[300px] overflow-hidden mb-0 calendar-widget w-full max-w-full`}>
                                         {renderCalendarView()}
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex-1 flex flex-col overflow-hidden mt-[-20px]">
-                                {isLoading ? (
-                                    <div className="flex items-center justify-center py-4">
-                                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                                    </div>
-                                ) : (
-                                    <div className="p-0 space-y-4 flex-1 flex flex-col overflow-hidden">
-                                        <div className="flex-1 overflow-hidden">
-                                            {error ? (
-                                                <div className="p-4 text-red-500">
-                                                    <p>Error loading events: {error instanceof Error ? error.message : 'Unknown error'}</p>
-                                                    <p className="text-sm mt-2">Using local events as fallback.</p>
-                                                    {!user && (
-                                                        <div className="mt-4">
-                                                            <p className="font-medium">Authentication Required</p>
-                                                            <p className="text-sm mt-1">Please log in to access your calendar events.</p>
-                                                            <Button
-                                                                className="mt-2"
-                                                                size="sm"
-                                                                onClick={() => window.location.href = '/auth/login'}
-                                                            >
-                                                                Go to Login
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <EventsList
-                                                    date={selectedDate}
-                                                    events={events}
-                                                    onVisibleDateChange={handleVisibleDateChange}
-                                                    scrollToDateRef={scrollToDateRef}
-                                                />
-                                            )}
+                                <div className="flex-1 overflow-y-auto overflow-x-hidden -mt-4 flex flex-col gap-0 max-w-full">
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                         </div>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="p-0 space-y-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
+                                            <div className="flex-1 overflow-y-auto overflow-x-hidden max-w-full">
+                                                {error ? (
+                                                    <div className="p-4 text-red-500">
+                                                        <p>Error loading events: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                                                        <p className="text-sm mt-2">Using local events as fallback.</p>
+                                                        {!user && (
+                                                            <div className="mt-4">
+                                                                <p className="font-medium">Authentication Required</p>
+                                                                <p className="text-sm mt-1">Please log in to access your calendar events.</p>
+                                                                <Button
+                                                                    className="mt-2"
+                                                                    size="sm"
+                                                                    onClick={() => window.location.href = '/auth/login'}
+                                                                >
+                                                                    Go to Login
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-full flex flex-col gap-0 max-w-full" data-testid="events-list-wrapper">
+                                                        <EventsList
+                                                            key={selectedDate.toISOString()}
+                                                            date={selectedDate}
+                                                            events={events || []}
+                                                            onVisibleDateChange={handleVisibleDateChange}
+                                                            scrollToDateRef={scrollToDateRef}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </TabsContent>
 
@@ -490,6 +362,28 @@ export function SidebarRight() {
                     </Tabs>
                 </div>
             </Sidebar>
+
+            {/* Event Form Dialog */}
+            {showEventForm && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                    onClick={(e) => {
+                        // Close when clicking the overlay
+                        if (e.target === e.currentTarget) {
+                            setShowEventForm(false);
+                        }
+                    }}
+                >
+                    <div className="bg-background rounded-lg shadow-lg border border-border w-full max-w-md">
+                        <EventForm
+                            selectedDate={selectedDate}
+                            onEventAdded={handleEventSubmit}
+                            onCancel={() => setShowEventForm(false)}
+                            alwaysShowForm={true}
+                        />
+                    </div>
+                </div>
+            )}
         </DndProvider>
     );
 }

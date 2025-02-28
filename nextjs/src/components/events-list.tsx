@@ -1,25 +1,28 @@
 "use client"
 
-import { format, isSameDay, parseISO, compareAsc, startOfDay, isEqual } from "date-fns"
+/**
+ * events-list.tsx
+ * Updated: 2/27/2025
+ * 
+ * This component has been simplified to:
+ * - Show events only for the selected date
+ * - Remove the synchronized scrolling functionality
+ * - Maintain event interaction capabilities (click, edit, delete)
+ * - Preserve drag-and-drop functionality
+ */
+
+import { format, isSameDay, parseISO, compareAsc } from "date-fns"
 import { Database } from "@/lib/database.types"
 import { useEffect, useRef, useState, useCallback } from "react"
-import { useInView } from "react-intersection-observer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useUpdateEvent, useDeleteEvent } from "@/hooks/useCalendarEvents"
 import { useUpdateEventDate } from "@/hooks/useUpdateEventDate"
 import { getCurrentUserId, useAuth } from "@/lib/auth"
 import { DraggableEventCard } from "./DraggableEventCard"
-import { VirtualizedEventsList } from "./VirtualizedEventsList"
 
-// Extend the base CalendarEvent type to include our new fields
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row'] & {
-    end_date?: string;
-    is_all_day?: boolean;
-    location?: string;
-    invitees?: string[];
-    recurrence_rule?: string;
-}
+// Use the CalendarEvent type from useCalendarEvents hook
+import { CalendarEvent } from "@/hooks/useCalendarEvents";
 
 interface EventsListProps {
     date: Date
@@ -772,69 +775,10 @@ function EventDialog({
     )
 }
 
-function DayEvents({
-    date,
-    events,
-    onEventClick,
-    currentUserId,
-    onInView,
-    onDragStart,
-    onDragEnd
-}: {
-    date: Date
-    events: CalendarEvent[]
-    onEventClick: (event: CalendarEvent) => void
-    currentUserId: string | null
-    onInView?: (date: Date, inView: boolean) => void
-    onDragStart?: (event: CalendarEvent) => void
-    onDragEnd?: () => void
-}) {
-    // Set up intersection observer for this date section with a lower threshold for smoother scrolling
-    const { ref, inView } = useInView({
-        threshold: 0.3, // Lower threshold for more responsive detection
-        onChange: (inView) => {
-            if (onInView) {
-                onInView(date, inView);
-            }
-        }
-    });
-
-    // Sort events by time
-    const sortedEvents = [...events].sort((a, b) =>
-        parseISO(a.date).getTime() - parseISO(b.date).getTime()
-    );
-
-    if (sortedEvents.length === 0) return null
-
-    return (
-        <div ref={ref} className="space-y-4 mb-8">
-            <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold">
-                    {format(date, "d")} {format(date, "EEEE")}
-                </h3>
-                <span className="text-sm text-muted-foreground">{sortedEvents.length} events</span>
-            </div>
-            <div className="space-y-3">
-                {sortedEvents.map(event => (
-                    <DraggableEventCard
-                        key={event.id}
-                        event={event}
-                        onClick={onEventClick}
-                        isOwnedByCurrentUser={currentUserId === event.user_id}
-                        onDragStart={onDragStart ? () => onDragStart(event) : undefined}
-                        onDragEnd={onDragEnd}
-                    />
-                ))}
-            </div>
-        </div>
-    )
-}
-
 export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef }: EventsListProps) {
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
-    const virtualizedListRef = useRef<HTMLDivElement>(null)
     const deleteEventMutation = useDeleteEvent()
     const updateEventDateMutation = useUpdateEventDate()
     const { user } = useAuth()
@@ -864,84 +808,28 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
         setDraggedEvent(null)
     }
 
-    // Handle event drop on a date
-    const handleEventDrop = (event: CalendarEvent, newDate: Date) => {
-        // Only allow dropping if the event is owned by the current user
-        if (event.user_id !== currentUserId) return
+    // Filter events for the selected date
+    const eventsForSelectedDate = events.filter(event => {
+        const eventDate = parseISO(event.date)
+        return isSameDay(eventDate, date)
+    })
 
-        // Update the event date
-        updateEventDateMutation.mutate({
-            event,
-            newDate
-        })
-    }
+    // Sort events by time
+    const sortedEvents = [...eventsForSelectedDate].sort((a, b) =>
+        parseISO(a.date).getTime() - parseISO(b.date).getTime()
+    )
 
-    // Group events by date (using simple date string as key)
-    const eventsByDate = new Map<string, { date: Date, events: CalendarEvent[] }>();
-
-    // Process each event and group by date
-    events.forEach(event => {
-        const eventDate = parseISO(event.date);
-        // Create a simple date string (YYYY-MM-DD) as the key
-        const dateKey = format(eventDate, "yyyy-MM-dd");
-
-        if (!eventsByDate.has(dateKey)) {
-            eventsByDate.set(dateKey, {
-                date: startOfDay(eventDate),
-                events: []
-            });
-        }
-
-        eventsByDate.get(dateKey)?.events.push(event);
-    });
-
-    // Convert to array for easier manipulation
-    const datesWithEvents = Array.from(eventsByDate.values());
-
-    // Create a simple date string for the selected date
-    const selectedDateKey = format(date, "yyyy-MM-dd");
-
-    // Find if the selected date has events
-    const hasSelectedDateEvents = eventsByDate.has(selectedDateKey);
-
-    // Sort all dates chronologically
-    datesWithEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    // Track which date is currently visible at the top of the viewport
-    const [visibleTopDate, setVisibleTopDate] = useState<Date | null>(null);
-
-    // Helper function to find the closest date with events
-    const findClosestDateWithEvents = useCallback((targetDate: Date, dates: { date: Date, events: CalendarEvent[] }[]): Date | null => {
-        if (dates.length === 0) return null;
-
-        // Sort dates by absolute difference from target date
-        const sortedDates = [...dates].sort((a, b) => {
-            const diffA = Math.abs(a.date.getTime() - targetDate.getTime());
-            const diffB = Math.abs(b.date.getTime() - targetDate.getTime());
-            return diffA - diffB;
-        });
-
-        return sortedDates[0].date;
-    }, []);
-
-    // This function is no longer needed as we're using the VirtualizedEventsList component
-
-    // This effect is no longer needed as we're using the VirtualizedEventsList component
-
-    // This function is no longer needed as we're using the VirtualizedEventsList component
-
-    // Create a copy of the sorted dates for display
-    const orderedDates = [...datesWithEvents];
-
-    // Scroll to date when it changes
+    // Support for scrollToDateRef for compatibility with API
     useEffect(() => {
-        if (virtualizedListRef.current && 'scrollToDate' in virtualizedListRef.current) {
-            const scrollToDateFn = (virtualizedListRef.current as any).scrollToDate;
-            if (typeof scrollToDateFn === 'function') {
-                scrollToDateFn(date);
+        if (scrollToDateRef && 'current' in scrollToDateRef) {
+            scrollToDateRef.current = (targetDate: Date) => {
+                // This is now simplified since we only show events for the selected date
+                if (onVisibleDateChange) {
+                    onVisibleDateChange(targetDate)
+                }
             }
         }
-    }, [date]);
+    }, [scrollToDateRef, onVisibleDateChange])
 
     // Handle event click
     const handleEventClick = (event: CalendarEvent) => {
@@ -963,32 +851,31 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
         })
     }
 
-    // Expose scrollToDate function via ref
-    useEffect(() => {
-        if (scrollToDateRef && 'current' in scrollToDateRef && virtualizedListRef.current) {
-            scrollToDateRef.current = (targetDate: Date) => {
-                if (virtualizedListRef.current && 'scrollToDate' in virtualizedListRef.current) {
-                    const scrollToDateFn = (virtualizedListRef.current as any).scrollToDate;
-                    if (typeof scrollToDateFn === 'function') {
-                        scrollToDateFn(targetDate);
-                    }
-                }
-            };
-        }
-    }, [scrollToDateRef]);
-
     return (
-        <div className="h-full flex flex-col">
-            <div className="flex-1 h-full" ref={virtualizedListRef}>
-                <VirtualizedEventsList
-                    events={events}
-                    currentUserId={currentUserId}
-                    onEventClick={handleEventClick}
-                    onVisibleDateChange={onVisibleDateChange}
-                    onDragStart={handleEventDragStart}
-                    onDragEnd={handleEventDragEnd}
-                    date={date} // Pass the selected date to ensure synchronization
-                />
+        <div className="h-full flex flex-col w-full max-w-full">
+            <div className="px-0 pt-0 pb-2 flex flex-col h-full w-full max-w-full">
+                <h3 className="text-lg font-bold mb-2">
+                    {format(date, "MMM d, yyyy")}
+                </h3>
+
+                {sortedEvents.length === 0 ? (
+                    <div className="text-center p-3 bg-muted/20 rounded-lg">
+                        <p className="text-sm text-muted-foreground">No events scheduled for this day.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-2 w-full">
+                        {sortedEvents.map(event => (
+                            <DraggableEventCard
+                                key={event.id}
+                                event={event}
+                                onClick={handleEventClick}
+                                isOwnedByCurrentUser={currentUserId === event.user_id}
+                                onDragStart={() => handleEventDragStart(event)}
+                                onDragEnd={handleEventDragEnd}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             <EventDialog
