@@ -2,7 +2,7 @@
 'use client';
 
 import { createSPASassClient } from '@/lib/supabase/client';
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SSOButtons from '@/components/SSOButtons';
@@ -51,7 +51,7 @@ export default function LoginPage() {
 
 
     useEffect(() => {
-        if(showMFAPrompt) {
+        if (showMFAPrompt) {
             router.push('/auth/2fa');
         }
     }, [showMFAPrompt, router]);
@@ -80,6 +80,7 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+                            suppressHydrationWarning
                         />
                     </div>
                 </div>
@@ -98,6 +99,7 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+                            suppressHydrationWarning
                         />
                     </div>
                 </div>

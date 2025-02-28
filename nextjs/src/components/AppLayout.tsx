@@ -33,12 +33,12 @@ export default function AppLayout({
     return (
         <SidebarProvider>
             <SidebarLeft />
-            <SidebarInset>
+            <SidebarInset className="!border-0 overflow-hidden">
                 <DashboardHeader
                     isProjectPage={isProjectPage}
                     projectName={projectName}
                 />
-                <div className="flex flex-1 flex-col gap-4 p-4">
+                <div className="flex flex-1 flex-col gap-4 p-4 mx-1 border-t-0">
                     {children}
                 </div>
             </SidebarInset>

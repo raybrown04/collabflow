@@ -10,7 +10,7 @@ import { DroppableCalendarDay } from "./DroppableCalendarDay"
 import { useUpdateEventDate } from "@/hooks/useUpdateEventDate"
 import { useToast } from "@/components/ui/use-toast"
 
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
+import { CalendarEvent } from "@/hooks/useCalendarEvents"
 
 interface CalendarWidgetProps {
     selectedDate: Date
@@ -80,31 +80,30 @@ export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop
     }
 
     return (
-        <div className="rounded-lg border mx-auto mb-4 bg-background shadow-sm" style={{ width: "calc(100% - 0.5rem)" }}>
+        <div className="rounded-lg border mx-auto mb-0 bg-background shadow-sm w-full overflow-visible">
             <DayPicker
                 mode="single"
                 month={selectedDate}
                 selected={selectedDate}
                 onSelect={(date) => date && onDateSelect(date)}
                 showOutsideDays={true}
-                fixedWeeks
                 hideHead={false}
-                className="w-full p-0"
+                className="w-full p-0 overflow-visible"
                 classNames={{
-                    months: "w-full",
-                    month: "w-full",
+                    months: "w-full overflow-visible",
+                    month: "w-full overflow-visible",
                     caption: "hidden",
                     caption_label: "hidden",
                     nav: "hidden",
                     nav_button: "hidden",
                     nav_button_previous: "hidden",
                     nav_button_next: "hidden",
-                    table: "w-full border-collapse",
-                    head_row: "flex w-full",
-                    head_cell: "text-muted-foreground rounded-none w-full font-normal text-[0.8rem] uppercase",
-                    row: "flex w-full mt-0",
-                    cell: "relative h-10 w-full p-0 text-center text-sm focus-within:relative focus-within:z-20",
-                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-full mx-auto",
+                    table: "w-full border-collapse overflow-visible",
+                    head_row: "flex w-full overflow-visible",
+                    head_cell: "text-foreground rounded-none w-full font-bold text-[0.75rem] uppercase px-0 mx-0",
+                    row: "flex w-full mt-0 mx-0 px-0 overflow-visible",
+                    cell: "relative h-9 w-full p-0 mx-0 text-center text-xs focus-within:relative focus-within:z-20",
+                    day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-full mx-auto",
                     day_outside: "opacity-50 cursor-default",
                     day_today: "bg-accent/50 text-accent-foreground",
                     day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",

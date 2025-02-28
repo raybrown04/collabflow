@@ -16,7 +16,7 @@ import { DroppableCalendarDay } from "./DroppableCalendarDay"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
+import { CalendarEvent } from "@/hooks/useCalendarEvents"
 
 interface DayViewProps {
     selectedDate: Date

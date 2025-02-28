@@ -3,8 +3,11 @@
 /**
  * DashboardHeader component
  * 
- * Header component for the dashboard with title, search bar, and user profile menu.
+ * Header component for the dashboard with title, search bar, theme switcher, and user profile menu.
  * Shows "Dashboard" for the main page and project name for project-specific pages.
+ * 
+ * Changes:
+ * - Added ThemeSwitcher component for theme switching functionality
  */
 
 import { useState } from "react"
@@ -12,6 +15,7 @@ import { Search, Bell, User, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth"
+import { ThemeSwitcher } from "@/components/ThemeSwitcher"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -53,14 +57,14 @@ export function DashboardHeader({
     }
 
     return (
-        <header className="flex items-center justify-between p-4 border-b bg-background">
-            <div className="flex items-center">
+        <header className="flex h-[64px] items-center justify-between bg-background pb-[4px] border-b-0 border-none">
+            <div className="flex items-center p-4">
                 <h1 className="text-2xl font-bold">
                     {isProjectPage ? projectName : title}
                 </h1>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 p-4">
                 <form onSubmit={handleSearch} className="relative hidden md:block">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -70,6 +74,8 @@ export function DashboardHeader({
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </form>
+
+                <ThemeSwitcher className="hidden md:block" />
 
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
@@ -94,9 +100,17 @@ export function DashboardHeader({
                             <User className="mr-2 h-4 w-4" />
                             <span>Profile</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            <Settings className="mr-2 h-4 w-4" />
-                            <span>Settings</span>
+                        <DropdownMenuItem asChild>
+                            <a href="/app/user-settings">
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Settings</span>
+                            </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between w-full">
+                                <span>Theme</span>
+                                <ThemeSwitcher />
+                            </div>
                         </DropdownMenuItem>
                         {isAdmin && (
                             <DropdownMenuItem>

@@ -11,7 +11,7 @@
 import { CalendarWidget } from "./calendar-widget"
 import { Database } from "@/lib/database.types"
 
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
+import { CalendarEvent } from "@/hooks/useCalendarEvents"
 
 interface MonthViewProps {
     selectedDate: Date
@@ -22,7 +22,7 @@ interface MonthViewProps {
 
 export function MonthView({ selectedDate, onDateSelect, events, onEventDrop }: MonthViewProps) {
     return (
-        <div className="w-full px-2">
+        <div className="w-full">
             <CalendarWidget
                 selectedDate={selectedDate}
                 onDateSelect={onDateSelect}

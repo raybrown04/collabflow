@@ -209,9 +209,9 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                 is_all_day: isAllDay,
                 type,
                 user_id: userId,
-                location: location || undefined,
-                invitees: invitees.length > 0 ? invitees : undefined,
-                recurrence_rule: recurrenceRule || undefined
+                location: location || null,
+                invitees: invitees.length > 0 ? invitees : null,
+                recurrence_rule: recurrenceRule || null
             }
 
             // Call the create event mutation
@@ -268,7 +268,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                         required
                     />
                 </div>
@@ -282,7 +282,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                         rows={3}
                     />
                 </div>
@@ -330,7 +330,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                     name="recurrence-frequency"
                                     value={recurrenceFrequency}
                                     onChange={(e) => setRecurrenceFrequency(e.target.value as any)}
-                                    className="w-full rounded-md border px-3 py-2"
+                                    className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                                 >
                                     <option value="daily">Daily</option>
                                     <option value="weekly">Weekly</option>
@@ -352,7 +352,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         max="99"
                                         value={recurrenceInterval}
                                         onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                                        className="w-20 rounded-md border px-3 py-2"
+                                        className="w-20 rounded-md border px-3 py-2 bg-background text-foreground"
                                     />
                                     <span className="ml-2">
                                         {recurrenceFrequency === "daily" && "day(s)"}
@@ -432,7 +432,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         max="999"
                                         value={recurrenceCount}
                                         onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
-                                        className="w-20 rounded-md border px-3 py-2"
+                                        className="w-20 rounded-md border px-3 py-2 bg-background text-foreground"
                                         disabled={recurrenceEndType !== "after"}
                                     />
                                     <span className="ml-2">occurrence(s)</span>
@@ -456,7 +456,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         name="recurrence-end-date"
                                         value={format(recurrenceEndDate, "yyyy-MM-dd")}
                                         onChange={(e) => setRecurrenceEndDate(new Date(e.target.value))}
-                                        className="rounded-md border px-3 py-2"
+                                        className="rounded-md border px-3 py-2 bg-background text-foreground"
                                         disabled={recurrenceEndType !== "on"}
                                     />
                                 </div>
@@ -475,7 +475,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="event-type"
                             value={type}
                             onChange={(e) => setType(e.target.value as "meeting" | "task" | "reminder")}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                         >
                             <option value="meeting">Meeting</option>
                             <option value="task">Task</option>
@@ -494,7 +494,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 name="start-time"
                                 value={startTime}
                                 onChange={(e) => setStartTime(e.target.value)}
-                                className="w-full rounded-md border px-3 py-2"
+                                className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                             />
                         </div>
                     )}
@@ -511,7 +511,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="end-date"
                             value={format(endDate, "yyyy-MM-dd")}
                             onChange={(e) => setEndDate(new Date(e.target.value))}
-                            className="w-full rounded-md border px-3 py-2"
+                            className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                         />
                     </div>
                     {!isAllDay && (
@@ -525,7 +525,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 name="end-time"
                                 value={endTime}
                                 onChange={(e) => setEndTime(e.target.value)}
-                                className="w-full rounded-md border px-3 py-2"
+                                className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                             />
                         </div>
                     )}
@@ -541,7 +541,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-location"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
                         placeholder="Add location"
                     />
                 </div>
@@ -557,7 +557,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="invitee-email"
                             value={inviteInput}
                             onChange={(e) => setInviteInput(e.target.value)}
-                            className="flex-1 rounded-l-md border px-3 py-2"
+                            className="flex-1 rounded-l-md border px-3 py-2 bg-background text-foreground"
                             placeholder="Add email address"
                         />
                         <Button

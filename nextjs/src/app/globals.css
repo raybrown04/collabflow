@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* RBIIILV Design System v1.0 */
-:root {
+:root,
+.light-theme {
     /* Core Colors */
     --color-primary: 10 10 10;
     /* Rich Black */
@@ -47,29 +48,75 @@
     --sidebar-expanded-width: 240px;
 }
 
-.dark {
-    --background: 222.2 84% 4.9%;
+.dark-theme {
+    /* Core Colors - Following the system-wide style guide with blacks, blues, and greys */
+    --color-primary: 210 40% 98%;
+    /* Light Blue-White */
+    --color-secondary: 47 60 152;
+    /* Dynamic Blue - keeping brand color */
+    --color-background: 10 10 10;
+    /* Rich Black */
+    --color-surface: 30 30 30;
+    /* Dark Grey */
+    --color-error: 220 38 38;
+    /* Crimson - keeping consistent */
+    --color-success: 22 163 74;
+    /* Emerald - keeping consistent */
+
+    /* Aliases for shadcn */
+    --background: 10 10% 5%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 10 10% 8%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 10 10% 5%;
     --popover-foreground: 210 40% 98%;
-    --primary: 255 255 255;
-    /* White in dark mode */
+    --primary: 210 40% 98%;
+    /* Light Blue-White */
     --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 102 115 182;
-    /* Desaturated Blue */
+    --secondary: 47 60 152;
+    /* Dynamic Blue */
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 248 113 113;
-    /* Light Crimson */
+    --destructive: 0 63% 31%;
+    /* Darker Red */
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+}
+
+/* For backward compatibility */
+.dark {
+    --background: 10 10% 5%;
+    --foreground: 210 40% 98%;
+    --card: 10 10% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 10 10% 5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    /* Light Blue-White */
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 47 60 152;
+    /* Dynamic Blue */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    /* Darker Red */
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+}
+
+/* Remove theme transitions completely for instant switching */
+* {
+    transition: none !important;
 }
 
 @layer base {
@@ -116,15 +163,70 @@
     p {
         line-height: 1.6;
     }
+
+    /* Fix for input fields in dark mode */
+    input,
+    textarea,
+    select {
+        @apply bg-background text-foreground border-border;
+        color: rgb(var(--foreground));
+    }
+
+    /* Ensure input placeholders are visible */
+    input::placeholder,
+    textarea::placeholder {
+        color: rgb(var(--muted-foreground));
+        opacity: 0.7;
+    }
+
+    /* Fix for date/time inputs in dark mode */
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"] {
+        color-scheme: light dark;
+    }
 }
 
 @layer components {
+
+    /* Layout and Alignment Fixes */
     .dashboard-container {
         display: grid;
         gap: var(--gutter);
         padding: var(--gutter);
     }
 
+    /* Header alignment fix */
+    header {
+        padding: 0 !important;
+    }
+
+    /* Consistent borders throughout the app */
+    .border-app {
+        @apply border-border;
+        border-width: 1px !important;
+    }
+
+    /* Header border styling */
+    .SidebarInset header {
+        border-bottom: none !important;
+    }
+
+    /* Add horizontal border between header and content */
+    .header-content-divider {
+        @apply border-border;
+        height: 1px;
+        position: absolute;
+        left: 4px;
+        right: 4px;
+        border-bottom-width: 1px !important;
+    }
+
+    header>div {
+        padding: var(--gutter);
+    }
+
+    /* Sidebar styling and alignment */
     .sidebar {
         @apply h-full flex flex-col;
         background-color: theme('colors.background');
@@ -140,6 +242,7 @@
     /* Fix for right sidebar specifically */
     .sidebar-right {
         background-color: theme('colors.background');
+        width: 320px;
     }
 
     .sidebar-right * {
@@ -150,19 +253,17 @@
         width: var(--sidebar-expanded-width);
     }
 
-    .sidebar-right {
-        width: 320px;
-    }
-
     .sidebar-collapsed {
         width: var(--sidebar-collapsed-width);
     }
 
+    /* Main content spacing fix */
     .main-content {
         @apply flex-1 overflow-auto;
         padding: var(--gutter);
     }
 
+    /* Card styling */
     .card {
         @apply bg-card text-card-foreground rounded-lg border shadow-sm;
         padding: var(--gutter);
@@ -175,24 +276,30 @@
         gap: var(--gutter);
     }
 
-    /* Task Items */
+    /* Task Items - Removed red/green coloring but kept icons */
     .task-item {
         @apply flex items-center gap-3 p-3 rounded-md hover:bg-accent;
-        border-left: 3px solid transparent;
+        border-left: none !important;
+        /* Remove colored borders */
+        background-color: transparent !important;
     }
 
-    .task-item.priority-high {
-        border-left-color: theme('colors.destructive.DEFAULT');
+    /* Keep the task item text visible in all themes */
+    .task-item,
+    .task-item * {
+        @apply text-foreground;
     }
 
-    .task-item.priority-medium {
-        border-left-color: #f59e0b;
-        /* Amber/Yellow for warning */
+    /* Keep the checkmark green */
+    .task-item svg.text-green-500,
+    .task-item svg.text-emerald-500 {
+        color: rgb(var(--color-success)) !important;
     }
 
-    .task-item.priority-low {
-        border-left-color: var(--color-success);
-        /* Using our success color variable */
+    /* Keep the today icon and text red */
+    .task-item svg.text-red-500,
+    .task-item .text-red-500 {
+        color: rgb(var(--color-error)) !important;
     }
 
     /* AI Components */
@@ -206,6 +313,20 @@
 
     .ai-search-collapsed {
         height: 64px;
+    }
+
+    /* Fix AI Quick Search text color */
+    .ai-search input,
+    .ai-search input::placeholder,
+    .ai-search .search-text {
+        @apply text-foreground;
+        color: rgb(var(--foreground)) !important;
+    }
+
+    /* Remove any purple/yellow colors from AI search */
+    [id^="ai-search"] *,
+    [class*="ai-search"] * {
+        color: rgb(var(--foreground)) !important;
     }
 
     .ai-assistant {
@@ -243,6 +364,34 @@
 
     .ai-message-assistant .ai-message-content {
         @apply bg-muted text-muted-foreground;
+    }
+
+    /* Form styling fixes for dark mode */
+    .dark-theme input,
+    .dark-theme textarea,
+    .dark-theme select {
+        background-color: rgb(30 30 30);
+        color: rgb(210 240 255);
+        border-color: rgb(60 60 60);
+    }
+
+    /* Modal styling fixes for dark mode */
+    .dark-theme [role="dialog"] {
+        background-color: rgb(20 20 20);
+        color: rgb(210 240 255);
+    }
+
+    /* Fix right sidebar spacing to match left sidebar */
+    .right-sidebar-content {
+        padding-left: var(--gutter);
+        padding-right: var(--gutter);
+    }
+
+    /* Fix calendar widget alignment */
+    .calendar-widget {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
     }
 }
 

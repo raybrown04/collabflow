@@ -6,6 +6,7 @@ This document provides an overview of key feature implementations in the CollabF
 - [Calendar Integration](#calendar-integration)
 - [Drag-and-Drop Calendar Events](#drag-and-drop-calendar-events)
 - [AI Integration](#ai-integration)
+- [User Profile and Settings](#user-profile-and-settings)
 
 ---
 
@@ -174,6 +175,138 @@ graph TD
     I --> L[Documents]
     I --> M[Email]
     I --> N[Project Info]
+```
+
+---
+
+## User Profile and Settings
+
+### Component Architecture
+
+```mermaid
+graph TD
+    A[User Settings Page] --> B[UserSettingsForm]
+    A --> C[MFASetup]
+    B --> D[Theme Settings]
+    B --> E[Notification Settings]
+    B --> F[Date/Time Settings]
+    B --> G[Language Settings]
+    
+    H[DashboardHeader] --> I[ThemeSwitcher]
+    H --> J[User Menu]
+    J --> K[Settings Link]
+    J --> L[Theme Menu]
+    
+    M[GlobalContext] --> N[Theme State]
+    M --> O[User State]
+    
+    I -- Updates --> N
+    B -- Updates --> P[User Settings Database]
+    P -- Loads --> M
+```
+
+### Database Schema
+
+The user settings are stored in a new `user_settings` table in the Supabase database:
+
+```sql
+create table user_settings (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null unique,
+  theme text default 'light' check (theme in ('light', 'dark', 'system')),
+  notification_email boolean default true,
+  notification_push boolean default true,
+  notification_calendar_reminders boolean default true,
+  notification_task_reminders boolean default true,
+  date_format text default 'MM/DD/YYYY',
+  time_format text default '12h',
+  first_day_of_week integer default 0 check (first_day_of_week between 0 and 6),
+  language text default 'en',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
+
+### Key Components
+
+#### UserSettingsForm
+
+The `UserSettingsForm` component provides a UI for users to update their settings. It includes:
+
+- Theme selection (light, dark, system)
+- Notification preferences
+- Date/time format preferences
+- Language selection
+
+The component uses React Query hooks for data fetching and mutations:
+
+```typescript
+// Fetch user settings
+const { data: settings, isLoading, error } = useUserSettings();
+
+// Update user settings
+const updateSettings = useUpdateUserSettings();
+
+// Update settings
+await updateSettings.mutateAsync({
+  theme: 'dark',
+  notification_email: true,
+  // other settings...
+});
+```
+
+#### ThemeSwitcher
+
+The `ThemeSwitcher` component provides a UI for switching between light, dark, and system themes:
+
+```tsx
+<ThemeSwitcher className="hidden md:flex" />
+```
+
+It's integrated in:
+- The dashboard header for quick access
+- The user settings dropdown menu
+- The user settings page
+
+#### Theme System
+
+The theme system uses CSS variables to define colors and other theme-specific values:
+
+```css
+:root,
+.light-theme {
+  --color-primary: 10 10 10;
+  --color-secondary: 47 60 152;
+  /* other variables... */
+}
+
+.dark-theme {
+  --color-primary: 255 255 255;
+  --color-secondary: 102 115 182;
+  /* other variables... */
+}
+```
+
+The theme is applied to the document root element using the `data-theme` attribute and CSS classes.
+
+### Development Mode Support
+
+The user settings feature includes development mode support:
+
+```typescript
+// Default settings for development mode
+const defaultSettings: UserSettings = {
+  id: 'dev-settings-id',
+  user_id: TEST_USER_ID,
+  theme: 'light',
+  // other default settings...
+};
+
+// In development mode, return default settings
+if (isDevelopment) {
+  console.log("Development mode: Using default user settings");
+  return defaultSettings;
+}
 ```
 
 ### Component Specifications

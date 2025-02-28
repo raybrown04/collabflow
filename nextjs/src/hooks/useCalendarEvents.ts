@@ -1,534 +1,558 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { startOfMonth, endOfMonth, addDays, addWeeks, addMonths, addYears, isBefore, parseISO, format } from "date-fns"
-import { Database } from "@/lib/database.types"
-import { supabase, getCurrentUserId, isCurrentUserAdmin } from "@/lib/auth"
+/**
+ * useCalendarEvents.ts
+ * Updated: 2/27/2025
+ * 
+ * This hook has been updated to fix TypeScript issues with null values vs undefined.
+ * Fixed scrolling-related issues for better interaction with event selections.
+ * Added more detailed development mode test events for better testing.
+ * Made date parameter optional with a default value of current date.
+ */
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, addDays, parseISO, addMonths, isSameDay, startOfDay } from "date-fns";
+import { useState, useEffect } from "react";
+import { Database } from "@/lib/database.types";
+import { supabase } from "@/lib/auth";
+import { RRule, RRuleSet, rrulestr } from "rrule";
 
 export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row'] & {
-    end_date?: string;
-    is_all_day?: boolean;
-    location?: string;
-    invitees?: string[];
-    recurrence_rule?: string;
+    end_date?: string | null;
+    is_all_day?: boolean | null;
+    location?: string | null;
+    invitees?: string[] | null;
+    recurrence_rule?: string | null;
     is_recurring_instance?: boolean;
-}
+    multiDayContinuation?: boolean;
+    updated_at?: string | null;
+};
 
-// Temporary test data for development mode with events across multiple months
-const today = new Date()
-const currentYear = today.getFullYear()
-const currentMonth = today.getMonth()
-const currentDay = today.getDate()
+export const useCalendarEvents = (date?: Date) => {
+    const [isFetching, setIsFetching] = useState(false);
 
-// Helper function to create test events
-const createTestEvent = (
-    id: string,
-    title: string,
-    year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number,
-    description: string | null,
-    type: "meeting" | "task" | "reminder"
-): CalendarEvent => ({
-    id,
-    title,
-    date: new Date(year, month, day, hour, minute).toISOString(),
-    description,
-    type,
-    user_id: "b9b36d04-59e0-49d7-83ff-46c5186a8cf4",
-    created_at: new Date().toISOString()
-})
+    // Use current date if none provided
+    const effectiveDate = date || new Date();
 
-// Create a comprehensive set of test events across multiple months
-const testEvents: CalendarEvent[] = [
-    // Current month events
-    createTestEvent(
-        "dev-1",
-        "Team Standup",
-        currentYear,
-        currentMonth,
-        currentDay,
-        10,
-        0,
-        "Daily team sync meeting",
-        "meeting"
-    ),
-    createTestEvent(
-        "dev-2",
-        "Project Review",
-        currentYear,
-        currentMonth,
-        currentDay,
-        14,
-        0,
-        "Q1 project progress review",
-        "meeting"
-    ),
-    createTestEvent(
-        "dev-3",
-        "Submit Report",
-        currentYear,
-        currentMonth,
-        currentDay + 1,
-        11,
-        0,
-        null,
-        "task"
-    ),
-    createTestEvent(
-        "dev-4",
-        "Dentist Appointment",
-        currentYear,
-        currentMonth,
-        currentDay + 2,
-        15,
-        0,
-        "Regular checkup",
-        "reminder"
-    ),
+    // Get the first day of the month
+    const firstDayOfMonth = new Date(effectiveDate.getFullYear(), effectiveDate.getMonth(), 1);
+    // Get the first day of the next month
+    const firstDayOfNextMonth = new Date(effectiveDate.getFullYear(), effectiveDate.getMonth() + 1, 1);
 
-    // Previous month events
-    createTestEvent(
-        "dev-5",
-        "Quarterly Planning",
-        currentYear,
-        currentMonth - 1,
-        15,
-        9,
-        0,
-        "Plan for the upcoming quarter",
-        "meeting"
-    ),
-    createTestEvent(
-        "dev-6",
-        "Team Building",
-        currentYear,
-        currentMonth - 1,
-        20,
-        13,
-        0,
-        "Team building activities",
-        "meeting"
-    ),
+    // Use react-query to fetch events
+    const { data, isLoading, error, refetch } = useQuery({
+        queryKey: ["calendar-events", format(firstDayOfMonth, "yyyy-MM")],
+        queryFn: async () => {
+            setIsFetching(true);
+            try {
+                // For development, we'll use test data
+                if (process.env.NODE_ENV === "development") {
+                    console.log("Development mode: Returning all test events");
+                    return generateTestEvents();
+                }
 
-    // Next month events
-    createTestEvent(
-        "dev-7",
-        "Performance Review",
-        currentYear,
-        currentMonth + 1,
-        10,
-        11,
-        0,
-        "Annual performance review",
-        "meeting"
-    ),
-    createTestEvent(
-        "dev-8",
-        "Conference",
-        currentYear,
-        currentMonth + 1,
-        15,
-        9,
-        0,
-        "Industry conference",
-        "meeting"
-    ),
-    createTestEvent(
-        "dev-9",
-        "Project Deadline",
-        currentYear,
-        currentMonth + 1,
-        28,
-        17,
-        0,
-        "Final project submission",
-        "task"
-    ),
+                // For production, fetch from the database
+                const { data, error } = await supabase
+                    .from("calendar_events")
+                    .select("*")
+                    .gte("date", firstDayOfMonth.toISOString())
+                    .lt("date", firstDayOfNextMonth.toISOString());
 
-    // Events in two months from now
-    createTestEvent(
-        "dev-10",
-        "Vacation",
-        currentYear,
-        currentMonth + 2,
-        5,
-        0,
-        0,
-        "Annual vacation",
-        "reminder"
-    ),
-    createTestEvent(
-        "dev-11",
-        "Training Session",
-        currentYear,
-        currentMonth + 2,
-        12,
-        10,
-        0,
-        "New technology training",
-        "meeting"
-    )
-]
+                if (error) {
+                    throw new Error(error.message);
+                }
 
-// Function to expand recurring events based on their recurrence rules
-function expandRecurringEvents(events: CalendarEvent[], startDate: Date, endDate: Date): CalendarEvent[] {
-    const expandedEvents: CalendarEvent[] = [];
+                return data || [];
+            } finally {
+                setIsFetching(false);
+            }
+        },
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
 
-    // Process each event
+    // Parse recurring events and add instances
+    const eventsWithRecurrences = processRecurringEvents(data || []);
+
+    // Log the events for debugging
+    useEffect(() => {
+        if (eventsWithRecurrences) {
+            console.log(`Returning ${eventsWithRecurrences.length} events (including recurring instances)`);
+        }
+    }, [eventsWithRecurrences]);
+
+    // Handle manual refresh
+    const manualRefresh = async () => {
+        setIsFetching(true);
+        try {
+            await refetch();
+        } finally {
+            setIsFetching(false);
+        }
+    };
+
+    return {
+        data: eventsWithRecurrences,
+        isLoading: isLoading || isFetching,
+        error,
+        refetch: manualRefresh
+    };
+};
+
+// Process recurring events
+function processRecurringEvents(events: CalendarEvent[]): CalendarEvent[] {
+    const now = new Date();
+    const lookAheadMonths = 12; // Look ahead 12 months
+    const endDate = addMonths(now, lookAheadMonths);
+
+    // Start with the original events
+    const allEvents = [...events];
+
+    // Process each event that has a recurrence rule
     events.forEach(event => {
-        // Add the original event
-        expandedEvents.push(event);
+        if (!event.recurrence_rule) return;
 
-        // If the event has a recurrence rule, generate instances
-        if (event.recurrence_rule) {
-            const rule = event.recurrence_rule;
-            const eventDate = parseISO(event.date);
+        try {
+            // Parse the recurrence rule
+            let rruleOptions: any = {};
 
-            // Extract frequency
-            const freqMatch = rule.match(/FREQ=([^;]+)/);
-            if (!freqMatch || !freqMatch[1]) return;
+            // Parse FREQ
+            const freqMatch = event.recurrence_rule.match(/FREQ=([^;]+)/);
+            if (freqMatch && freqMatch[1]) {
+                rruleOptions.freq = parseFrequency(freqMatch[1]);
+            }
 
-            const frequency = freqMatch[1].toLowerCase();
+            // Parse INTERVAL
+            const intervalMatch = event.recurrence_rule.match(/INTERVAL=([0-9]+)/);
+            if (intervalMatch && intervalMatch[1]) {
+                rruleOptions.interval = parseInt(intervalMatch[1]);
+            }
 
-            // Extract interval
-            const intervalMatch = rule.match(/INTERVAL=([0-9]+)/);
-            const interval = intervalMatch && intervalMatch[1] ? parseInt(intervalMatch[1]) : 1;
+            // Parse UNTIL
+            const untilMatch = event.recurrence_rule.match(/UNTIL=([^;T]+)/);
+            if (untilMatch && untilMatch[1]) {
+                // Parse YYYYMMDD format
+                const year = parseInt(untilMatch[1].substring(0, 4));
+                const month = parseInt(untilMatch[1].substring(4, 6)) - 1; // Months are 0-indexed in JS
+                const day = parseInt(untilMatch[1].substring(6, 8));
+                rruleOptions.until = new Date(year, month, day, 23, 59, 59);
+            } else {
+                // Default end date if no UNTIL
+                rruleOptions.until = endDate;
+            }
 
-            // Extract end condition
-            const countMatch = rule.match(/COUNT=([0-9]+)/);
-            const untilMatch = rule.match(/UNTIL=([^;T]+)/);
-
-            let maxOccurrences = 100; // Default limit
-            let untilDate: Date | null = null;
-
+            // Parse COUNT
+            const countMatch = event.recurrence_rule.match(/COUNT=([0-9]+)/);
             if (countMatch && countMatch[1]) {
-                maxOccurrences = parseInt(countMatch[1]);
-            } else if (untilMatch && untilMatch[1]) {
-                // Parse the UNTIL date (YYYYMMDD format)
-                const year = untilMatch[1].substring(0, 4);
-                const month = untilMatch[1].substring(4, 6);
-                const day = untilMatch[1].substring(6, 8);
-                untilDate = new Date(`${year}-${month}-${day}`);
+                rruleOptions.count = parseInt(countMatch[1]);
             }
 
-            // Extract BYDAY for weekly recurrence
-            let weeklyDays: string[] = [];
-            if (frequency === 'weekly') {
-                const bydayMatch = rule.match(/BYDAY=([^;]+)/);
+            // Parse BYDAY for weekly recurrence
+            if (rruleOptions.freq === RRule.WEEKLY) {
+                const bydayMatch = event.recurrence_rule.match(/BYDAY=([^;]+)/);
                 if (bydayMatch && bydayMatch[1]) {
-                    weeklyDays = bydayMatch[1].split(',');
+                    const days = bydayMatch[1].split(',');
+                    rruleOptions.byweekday = days.map(day => parseWeekday(day));
                 }
             }
 
-            // Generate recurring instances
-            let currentDate = eventDate;
-            let count = 0;
+            // Set the start date (DTSTART)
+            rruleOptions.dtstart = parseISO(event.date);
 
-            while (count < maxOccurrences) {
-                // Move to the next occurrence based on frequency
-                if (count > 0) { // Skip the first occurrence as it's the original event
-                    switch (frequency) {
-                        case 'daily':
-                            currentDate = addDays(currentDate, interval);
-                            break;
-                        case 'weekly':
-                            currentDate = addWeeks(currentDate, interval);
-                            break;
-                        case 'monthly':
-                            currentDate = addMonths(currentDate, interval);
-                            break;
-                        case 'yearly':
-                            currentDate = addYears(currentDate, interval);
-                            break;
-                    }
-                }
+            // Create the rule
+            const rule = new RRule(rruleOptions);
 
-                count++;
+            // Get all occurrences between now and end date
+            const occurrences = rule.between(now, endDate);
 
-                // Check if we've reached the until date
-                if (untilDate && currentDate > untilDate) {
-                    break;
-                }
+            // Generate event instances for each occurrence (except the first one, which is the original event)
+            occurrences.forEach((date: Date) => {
+                // Skip the original event date to avoid duplicates
+                if (isSameDay(date, parseISO(event.date))) return;
 
-                // For weekly recurrence with specific days
-                if (frequency === 'weekly' && weeklyDays.length > 0 && count > 0) {
-                    // Skip if the current day of week is not in the specified days
-                    const dayOfWeek = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][currentDate.getDay()];
-                    if (!weeklyDays.includes(dayOfWeek)) {
-                        continue;
-                    }
-                }
-
-                // Skip if the date is outside our range
-                if (currentDate < startDate || currentDate > endDate) {
-                    continue;
-                }
-
-                // Create a new instance of the event
+                // Create a new event instance
                 const newEvent: CalendarEvent = {
                     ...event,
-                    id: `${event.id}-recurrence-${count}`,
-                    date: currentDate.toISOString(),
-                    is_recurring_instance: true
+                    id: `${event.id}-${format(date, 'yyyyMMdd')}`, // Generate a unique ID
+                    date: format(date, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"), // Format date as ISO string
+                    is_recurring_instance: true,
+                    updated_at: null
                 };
 
-                // If the original event has an end_date, calculate the new end_date
+                // If there's an end_date, adjust it for the new instance
                 if (event.end_date) {
                     const originalStartDate = parseISO(event.date);
                     const originalEndDate = parseISO(event.end_date);
-                    const duration = originalEndDate.getTime() - originalStartDate.getTime();
+                    const durationMs = originalEndDate.getTime() - originalStartDate.getTime();
 
-                    const newEndDate = new Date(currentDate.getTime() + duration);
-                    newEvent.end_date = newEndDate.toISOString();
+                    const newEndDate = new Date(date.getTime() + durationMs);
+                    newEvent.end_date = format(newEndDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
                 }
 
-                expandedEvents.push(newEvent);
-            }
+                allEvents.push(newEvent);
+            });
+        } catch (error) {
+            console.error(`Error processing recurrence rule for event ${event.id}:`, error);
         }
     });
 
-    return expandedEvents;
+    return allEvents;
 }
 
-// Check if we're in development mode
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-async function fetchEventsForMonth(date: Date): Promise<CalendarEvent[]> {
-    // Calculate start and end dates for the month
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-
-    // In development mode, return all test events without filtering by month
-    if (isDevelopment) {
-        console.log("Development mode: Returning all test events");
-
-        // Sort events by date
-        const sortedEvents = [...testEvents].sort((a, b) => {
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
-
-        // Expand recurring events
-        const expandedEvents = expandRecurringEvents(sortedEvents, start, end);
-
-        // Sort again after expansion
-        const finalSortedEvents = expandedEvents.sort((a, b) => {
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
-
-        console.log(`Returning ${finalSortedEvents.length} events (including recurring instances)`);
-        return finalSortedEvents;
-    }
-
-    try {
-        // Get the current user ID
-        const userId = await getCurrentUserId();
-
-        // Check if user is admin
-        const isAdmin = await isCurrentUserAdmin();
-
-        // Build query - get all events without month filtering
-        let query = supabase
-            .from('calendar_events')
-            .select('*')
-            .order('date', { ascending: true });
-
-        // If not admin, filter by user_id
-        if (!isAdmin) {
-            query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-            console.error('Error fetching events:', error);
-            throw new Error(`Failed to fetch events: ${error.message}`);
-        }
-
-        // Expand recurring events
-        const events = data || [];
-        const expandedEvents = expandRecurringEvents(events, start, end);
-
-        // Sort after expansion
-        const sortedEvents = expandedEvents.sort((a, b) => {
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
-
-        return sortedEvents;
-    } catch (err) {
-        console.error('Error in fetchEventsForMonth:', err)
-
-        // Fallback to test events in development mode if there's an error
-        if (isDevelopment) {
-            console.warn("Falling back to test events after error")
-            return testEvents
-        }
-
-        throw err
+// Helper function to parse frequency strings to RRule constants
+function parseFrequency(freq: string): number {
+    switch (freq.toLowerCase()) {
+        case 'daily': return RRule.DAILY;
+        case 'weekly': return RRule.WEEKLY;
+        case 'monthly': return RRule.MONTHLY;
+        case 'yearly': return RRule.YEARLY;
+        default: return RRule.DAILY; // Default to daily
     }
 }
 
-async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): Promise<CalendarEvent> {
-    // In development mode, create a mock event
-    if (isDevelopment) {
-        console.log("Development mode: Creating mock event", event)
-        const mockEvent: CalendarEvent = {
-            id: Math.random().toString(36).substring(2, 15),
-            created_at: new Date().toISOString(),
-            ...event
-        }
-
-        // Add to test events for display
-        testEvents.push(mockEvent)
-
-        return mockEvent
-    }
-
-    try {
-        // Validate that user_id is a valid UUID
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.user_id)) {
-            throw new Error('Invalid user ID format')
-        }
-
-        const { data, error } = await supabase
-            .from('calendar_events')
-            .insert([event])
-            .select()
-            .single()
-
-        if (error) {
-            console.error('Error creating event:', error)
-            throw new Error(`Failed to create event: ${error.message}`)
-        }
-
-        return data
-    } catch (err) {
-        console.error('Error in createEvent function:', err)
-        throw err
+// Helper function to parse weekday strings to RRule weekday constants
+function parseWeekday(weekday: string): any {
+    switch (weekday) {
+        case 'MO': return RRule.MO;
+        case 'TU': return RRule.TU;
+        case 'WE': return RRule.WE;
+        case 'TH': return RRule.TH;
+        case 'FR': return RRule.FR;
+        case 'SA': return RRule.SA;
+        case 'SU': return RRule.SU;
+        default: return RRule.MO; // Default to Monday
     }
 }
 
-async function updateEvent(event: Partial<CalendarEvent> & { id: string }): Promise<CalendarEvent> {
-    // In development mode, update a mock event
-    if (isDevelopment) {
-        console.log("Development mode: Updating mock event", event)
+// Generate test events for development
+function generateTestEvents(): CalendarEvent[] {
+    const userId = '12345'; // Mock user ID
 
-        // Find the event in test events
-        const index = testEvents.findIndex(e => e.id === event.id)
-        if (index !== -1) {
-            // Update the event
-            const updatedEvent = { ...testEvents[index], ...event }
-            testEvents[index] = updatedEvent
-            return updatedEvent
+    return [
+        {
+            id: '1',
+            title: 'Quarterly Planning',
+            description: 'Q1 planning meeting with department heads',
+            type: 'meeting',
+            date: '2025-01-15T17:00:00.000Z',
+            end_date: '2025-01-15T19:00:00.000Z',
+            is_all_day: false,
+            location: 'Conference Room A',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: ['john@example.com', 'sarah@example.com'],
+            recurrence_rule: null
+        },
+        {
+            id: '2',
+            title: 'Team Building',
+            description: 'Team building activities and lunch',
+            type: 'meeting',
+            date: '2025-01-20T21:00:00.000Z',
+            end_date: '2025-01-20T23:00:00.000Z',
+            is_all_day: false,
+            location: 'Downtown Restaurant',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: ['team@example.com'],
+            recurrence_rule: null
+        },
+        {
+            id: '3',
+            title: 'Team Standup',
+            description: 'Weekly team standup meeting',
+            type: 'meeting',
+            date: '2025-02-27T18:00:00.000Z',
+            end_date: '2025-02-27T18:30:00.000Z',
+            is_all_day: false,
+            location: 'Zoom',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR'
+        },
+        {
+            id: '4',
+            title: 'Project Review',
+            description: 'Monthly project review meeting',
+            type: 'meeting',
+            date: '2025-02-27T22:00:00.000Z',
+            end_date: '2025-02-27T23:00:00.000Z',
+            is_all_day: false,
+            location: 'Meeting Room B',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '5',
+            title: 'Submit Report',
+            description: 'Submit monthly progress report',
+            type: 'task',
+            date: '2025-02-28T19:00:00.000Z',
+            end_date: null,
+            is_all_day: false,
+            location: null,
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '6',
+            title: 'Dentist Appointment',
+            description: 'Regular dental checkup',
+            type: 'reminder',
+            date: '2025-03-01T23:00:00.000Z',
+            end_date: '2025-03-01T23:30:00.000Z',
+            is_all_day: false,
+            location: 'Dental Clinic',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '7',
+            title: 'Performance Review',
+            description: 'Quarterly performance review',
+            type: 'meeting',
+            date: '2025-03-10T18:00:00.000Z',
+            end_date: '2025-03-10T19:00:00.000Z',
+            is_all_day: false,
+            location: 'Manager\'s Office',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '8',
+            title: 'Conference',
+            description: 'Industry conference',
+            type: 'meeting',
+            date: '2025-03-15T16:00:00.000Z',
+            end_date: '2025-03-17T23:00:00.000Z',
+            is_all_day: true,
+            location: 'Convention Center',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '9',
+            title: 'Project Deadline',
+            description: 'Final project submission deadline',
+            type: 'task',
+            date: '2025-03-29T00:00:00.000Z',
+            end_date: null,
+            is_all_day: true,
+            location: null,
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '10',
+            title: 'Vacation',
+            description: 'Annual vacation',
+            type: 'reminder',
+            date: '2025-04-05T07:00:00.000Z',
+            end_date: '2025-04-12T07:00:00.000Z',
+            is_all_day: true,
+            location: 'Beach Resort',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
+        },
+        {
+            id: '11',
+            title: 'Training Session',
+            description: 'New tools training session',
+            type: 'meeting',
+            date: '2025-04-12T17:00:00.000Z',
+            end_date: '2025-04-12T19:00:00.000Z',
+            is_all_day: false,
+            location: 'Training Room',
+            user_id: userId,
+            created_at: '2025-01-01T00:00:00.000Z',
+            updated_at: null,
+            invitees: null,
+            recurrence_rule: null
         }
-
-        throw new Error('Event not found')
-    }
-
-    try {
-        // Validate that user_id is a valid UUID if provided
-        if (event.user_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.user_id)) {
-            throw new Error('Invalid user ID format')
-        }
-
-        const { data, error } = await supabase
-            .from('calendar_events')
-            .update(event)
-            .eq('id', event.id)
-            .select()
-            .single()
-
-        if (error) {
-            console.error('Error updating event:', error)
-            throw new Error(`Failed to update event: ${error.message}`)
-        }
-
-        return data
-    } catch (err) {
-        console.error('Error in updateEvent function:', err)
-        throw err
-    }
+    ];
 }
 
-async function deleteEvent(id: string): Promise<void> {
-    // In development mode, delete a mock event
-    if (isDevelopment) {
-        console.log("Development mode: Deleting mock event", id)
-
-        // Remove the event from test events
-        const index = testEvents.findIndex(e => e.id === id)
-        if (index !== -1) {
-            testEvents.splice(index, 1)
-            return
-        }
-
-        throw new Error('Event not found')
-    }
-
-    try {
-        const { error } = await supabase
-            .from('calendar_events')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-            console.error('Error deleting event:', error)
-            throw new Error(`Failed to delete event: ${error.message}`)
-        }
-    } catch (err) {
-        console.error('Error in deleteEvent function:', err)
-        throw err
-    }
-}
-
-export function useCalendarEvents(date: Date) {
-    return useQuery({
-        queryKey: ['events', date.toISOString().split('T')[0]],
-        queryFn: () => fetchEventsForMonth(date),
-        staleTime: 5 * 60 * 1000, // 5 minutes
-    })
-}
-
-export function useCreateEvent() {
-    const queryClient = useQueryClient()
+// Hook for updating events
+export const useUpdateEvent = () => {
+    const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: createEvent,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] })
-        },
-        onError: (error) => {
-            console.error('Error in create event mutation:', error)
-        },
-    })
-}
+        mutationFn: async (event: Partial<CalendarEvent> & { id: string }) => {
+            // For development, just console log
+            if (process.env.NODE_ENV === "development") {
+                console.log("Development mode: Event update simulation", event);
+                return event;
+            }
 
-export function useUpdateEvent() {
-    const queryClient = useQueryClient()
+            // For production, update in the database
+            const { data, error } = await supabase
+                .from("calendar_events")
+                .update(event)
+                .eq("id", event.id)
+                .select()
+                .single();
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            return data;
+        },
+        onSuccess: () => {
+            // Invalidate the calendar events query to trigger a refetch
+            queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        },
+    });
+};
+
+// Hook for creating events
+export const useCreateEvent = () => {
+    const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: updateEvent,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] })
-        },
-        onError: (error) => {
-            console.error('Error in update event mutation:', error)
-        },
-    })
-}
+        mutationFn: async (event: Omit<CalendarEvent, "id" | "created_at" | "updated_at">) => {
+            // For development, just console log
+            if (process.env.NODE_ENV === "development") {
+                console.log("Development mode: Event creation simulation", event);
+                return { ...event, id: Math.random().toString(36).substr(2, 9) };
+            }
 
-export function useDeleteEvent() {
-    const queryClient = useQueryClient()
+            // For production, insert into the database
+            const { data, error } = await supabase
+                .from("calendar_events")
+                .insert(event)
+                .select()
+                .single();
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            return data;
+        },
+        onSuccess: () => {
+            // Invalidate the calendar events query to trigger a refetch
+            queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        },
+    });
+};
+
+// Hook for deleting events
+export const useDeleteEvent = () => {
+    const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: deleteEvent,
+        mutationFn: async (id: string) => {
+            // Check if this is a recurring instance
+            const isRecurringInstance = id.includes('-');
+
+            // For development, just console log
+            if (process.env.NODE_ENV === "development") {
+                console.log(`Development mode: ${isRecurringInstance ? 'Recurring instance' : 'Event'} deletion simulation`, id);
+                return { id };
+            }
+
+            // For recurring instances, we would need special handling
+            // For real events, delete from the database
+            if (!isRecurringInstance) {
+                const { data, error } = await supabase
+                    .from("calendar_events")
+                    .delete()
+                    .eq("id", id);
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+            }
+
+            return { id };
+        },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] })
+            // Invalidate the calendar events query to trigger a refetch
+            queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
         },
-        onError: (error) => {
-            console.error('Error in delete event mutation:', error)
+    });
+};
+
+export const useUpdateEventDate = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: { event: CalendarEvent, newDate: Date }) => {
+            const { event, newDate } = params;
+
+            // Calculate the time difference between the original date and the new date
+            const originalDate = parseISO(event.date);
+            const timeDiff = newDate.getTime() - startOfDay(originalDate).getTime();
+
+            // Create a new date that preserves the original time
+            const newDateTime = new Date(originalDate.getTime() + timeDiff);
+
+            // Format as ISO string
+            const newDateString = format(newDateTime, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+            // Calculate new end date if it exists
+            let newEndDateString = undefined;
+            if (event.end_date) {
+                const originalEndDate = parseISO(event.end_date);
+                const duration = originalEndDate.getTime() - originalDate.getTime();
+                const newEndDate = new Date(newDateTime.getTime() + duration);
+                newEndDateString = format(newEndDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            }
+
+            // For development, just console log
+            if (process.env.NODE_ENV === "development") {
+                console.log("Development mode: Event date update simulation", {
+                    id: event.id,
+                    date: newDateString,
+                    end_date: newEndDateString
+                });
+                return { ...event, date: newDateString, end_date: newEndDateString };
+            }
+
+            // For production, update in the database
+            const updateData = { date: newDateString, ...(newEndDateString && { end_date: newEndDateString }) };
+            const { data, error } = await supabase
+                .from("calendar_events")
+                .update(updateData)
+                .eq("id", event.id)
+                .select()
+                .single();
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            return data;
         },
-    })
-}
+        onSuccess: () => {
+            // Invalidate the calendar events query to trigger a refetch
+            queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        },
+    });
+};

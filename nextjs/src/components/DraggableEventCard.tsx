@@ -2,10 +2,11 @@
 
 /**
  * DraggableEventCard.tsx
- * Updated: 2/26/2025
+ * Updated: 2/27/2025
  * 
  * This component has been enhanced with React DnD for improved drag-and-drop functionality.
  * It now provides better visual feedback during dragging and supports undo functionality.
+ * Added direct event click handling to ensure proper scrolling to the event's date.
  */
 
 import { format, parseISO, isSameDay } from "date-fns"
@@ -16,14 +17,8 @@ import { useDrag } from "react-dnd"
 // Define the drag item type
 export const ITEM_TYPE = "EVENT_CARD"
 
-// Extend the base CalendarEvent type to include our new fields
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row'] & {
-    end_date?: string;
-    is_all_day?: boolean;
-    location?: string;
-    invitees?: string[];
-    multiDayContinuation?: boolean; // Flag for events that span multiple days
-}
+// Use the CalendarEvent type from useCalendarEvents hook
+import { CalendarEvent } from "@/hooks/useCalendarEvents";
 
 interface DraggableEventCardProps {
     event: CalendarEvent
@@ -107,69 +102,84 @@ export function DraggableEventCard({
         }
     })
 
+    // Handle click event
+    const handleClick = (e: React.MouseEvent) => {
+        // Prevent click when dragging ends
+        if (!isDragging) {
+            // Call the parent onClick handler
+            onClick(event)
+        }
+    }
+
+    // Get user initials from the user ID
+    const getUserInitials = () => {
+        if (!event.user_id || isOwnedByCurrentUser) return null;
+
+        // Use first two characters of the user ID
+        return event.user_id.substring(0, 2).toUpperCase();
+    }
+
+    const userInitials = getUserInitials();
+
     return (
         <div
             ref={dragRef}
-            className={`relative rounded-lg border p-4 shadow-sm transition-all hover:shadow-md cursor-pointer ${isDragging ? 'opacity-50' : 'opacity-100'}`}
-            onClick={(e) => {
-                // Prevent click when dragging ends
-                if (!isDragging) {
-                    onClick(event)
-                }
-            }}
+            className={`relative rounded-lg border p-2 shadow-sm transition-all hover:shadow-md cursor-pointer w-full ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+            onClick={handleClick}
         >
-            <div className="flex items-center gap-3">
-                <div className={`h-4 w-4 rounded-full ${colors.dot}`} />
-                <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                        <div className="flex-1 mr-2">
-                            <h4 className="font-medium truncate">{event.title}</h4>
-                            <div className="flex flex-wrap items-center gap-1 mt-1">
-                                {!isOwnedByCurrentUser && (
-                                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                                        Other User
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <time className="text-sm text-muted-foreground whitespace-nowrap">
-                            {!event.is_all_day ? (
-                                event.end_date ? (
-                                    <>
-                                        {format(eventDate, "h:mm a")}-{format(parseISO(event.end_date), "h:mm a")}
-                                    </>
-                                ) : (
-                                    format(eventDate, "h:mm a")
-                                )
-                            ) : (
-                                "All day"
-                            )}
-                        </time>
+            <div className="flex items-center gap-2">
+                {isOwnedByCurrentUser ? (
+                    <div className={`flex-shrink-0 h-3 w-3 rounded-full ${colors.dot}`} />
+                ) : (
+                    <div className="h-4 w-4 rounded-full bg-blue-100 text-blue-800 flex-shrink-0 flex items-center justify-center text-[10px] font-medium">
+                        {userInitials || '??'}
                     </div>
-                    {event.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {event.description}
-                        </p>
-                    )}
-                    {event.location && (
-                        <p className="mt-1 text-xs text-muted-foreground flex items-center">
-                            <span className="mr-1">📍</span> {event.location}
-                        </p>
-                    )}
-                    {event.end_date && !isSameDay(parseISO(event.date), parseISO(event.end_date)) && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            {(() => {
-                                const startDate = parseISO(event.date);
-                                const endDate = parseISO(event.end_date);
-                                // Ensure start date is before end date for display
-                                if (startDate <= endDate) {
-                                    return `${format(startDate, "MMM d")} - ${format(endDate, "MMM d")}`;
-                                } else {
-                                    return `${format(endDate, "MMM d")} - ${format(startDate, "MMM d")}`;
-                                }
-                            })()}
-                        </p>
-                    )}
+                )}
+                <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex flex-col">
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm truncate">{event.title}</h4>
+                            <time className="text-xs text-muted-foreground whitespace-nowrap block">
+                                {!event.is_all_day ? (
+                                    event.end_date ? (
+                                        <>
+                                            {format(eventDate, "h:mm a")}-{format(parseISO(event.end_date), "h:mm a")}
+                                        </>
+                                    ) : (
+                                        format(eventDate, "h:mm a")
+                                    )
+                                ) : (
+                                    "All day"
+                                )}
+                            </time>
+                        </div>
+                        {event.description && (
+                            <p className="text-xs text-muted-foreground truncate">
+                                {event.description}
+                            </p>
+                        )}
+                        <div className="flex items-center justify-between">
+                            {event.location && (
+                                <p className="text-xs text-muted-foreground flex items-center truncate flex-1 min-w-0 mr-1">
+                                    <span className="mr-0.5 flex-shrink-0 text-[10px]">📍</span> {event.location}
+                                </p>
+                            )}
+                        </div>
+                        {event.end_date && !isSameDay(parseISO(event.date), parseISO(event.end_date)) && (
+                            <p className="text-xs text-muted-foreground">
+                                {(() => {
+                                    const startDate = parseISO(event.date);
+                                    const endDate = parseISO(event.end_date);
+                                    // Ensure start date is before end date for display
+                                    if (startDate <= endDate) {
+                                        return `${format(startDate, "MMM d")} - ${format(endDate, "MMM d")}`;
+                                    } else {
+                                        return `${format(endDate, "MMM d")} - ${format(startDate, "MMM d")}`;
+                                    }
+                                })()}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -179,5 +189,5 @@ export function DraggableEventCard({
                 </div>
             )}
         </div>
-    )
+    );
 }

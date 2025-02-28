@@ -1,5 +1,5 @@
-import {SupabaseClient} from "@supabase/supabase-js";
-import {Database} from "@/lib/types";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/lib/types";
 
 export enum ClientType {
     SERVER = 'server',
@@ -46,7 +46,7 @@ export class SassClient {
             scope: 'local'
         });
         if (error) throw error;
-        if(this.clientType === ClientType.SPA) {
+        if (this.clientType === ClientType.SPA) {
             window.location.href = '/auth/login';
         }
     }
@@ -86,12 +86,12 @@ export class SassClient {
         return this.client.from('todo_list').insert(row)
     }
 
-    async removeTask (id: string) {
-        return this.client.from('todo_list').delete().eq('id', id)
+    async removeTask(id: string) {
+        return this.client.from('todo_list').delete().eq('id', parseInt(id))
     }
 
-    async updateAsDone (id: string) {
-        return this.client.from('todo_list').update({done: true}).eq('id', id)
+    async updateAsDone(id: string) {
+        return this.client.from('todo_list').update({ done: true }).eq('id', parseInt(id))
     }
 
     getSupabaseClient() {

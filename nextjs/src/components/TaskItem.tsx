@@ -81,10 +81,9 @@ export function TaskItem({
     return (
         <Card
             className={cn(
-                "p-4 transition-all duration-200 border-l-4",
-                task.completed ? "border-l-green-500 bg-green-50 dark:bg-green-950/20" :
-                    isOverdue ? "border-l-red-500 bg-red-50 dark:bg-red-950/20" :
-                        `border-l-${getPriorityColor().replace('bg-', '')}`
+                "p-4 transition-all duration-200",
+                task.completed ? "bg-transparent" :
+                    isOverdue ? "bg-transparent" : "bg-transparent"
             )}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -110,10 +109,7 @@ export function TaskItem({
                         </h3>
 
                         <div className="flex items-center gap-1 ml-2">
-                            <div className={cn(
-                                "w-2 h-2 rounded-full",
-                                getPriorityColor()
-                            )} />
+                            {/* Priority indicator removed */}
 
                             {(isHovered || isOverdue) && canModify && (
                                 <div className="flex items-center gap-1">
@@ -148,14 +144,14 @@ export function TaskItem({
                     )}
 
                     {formattedDueDate && (
-                        <div className="flex items-center mt-2 text-xs text-gray-500">
+                        <div className="flex items-center mt-2 text-xs text-foreground">
                             {isOverdue ? (
                                 <Clock className="h-3 w-3 mr-1 text-red-500" />
                             ) : (
                                 <Calendar className="h-3 w-3 mr-1" />
                             )}
                             <span className={cn(
-                                isOverdue && !task.completed ? "text-red-500 font-medium" : "",
+                                isToday ? "text-red-500 font-medium" : "",
                                 task.completed && "line-through"
                             )}>
                                 {isToday ? "Today" : isTomorrow ? "Tomorrow" : formattedDay || formattedDueDate}

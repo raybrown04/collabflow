@@ -14,7 +14,7 @@ import { Database } from "@/lib/database.types"
 import { useDrop } from "react-dnd"
 import { ITEM_TYPE } from "./DraggableEventCard"
 
-type CalendarEvent = Database['public']['Tables']['calendar_events']['Row']
+import { CalendarEvent } from "@/hooks/useCalendarEvents"
 
 interface DroppableCalendarDayProps {
     day: Date

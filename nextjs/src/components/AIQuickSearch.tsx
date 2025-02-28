@@ -190,11 +190,11 @@ export function AIQuickSearch({
         >
             <div className="p-4">
                 <form onSubmit={handleSearch} className="flex items-center gap-2">
-                    <Search className="h-5 w-5 text-muted-foreground" />
+                    <Search className="h-5 w-5 text-foreground" />
                     <input
                         type="text"
                         placeholder={placeholder}
-                        className="flex-1 bg-transparent outline-none"
+                        className="flex-1 bg-transparent outline-none text-foreground placeholder:text-foreground"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onFocus={() => expandable && setExpanded(true)}
@@ -233,10 +233,10 @@ export function AIQuickSearch({
                             ))}
                         </div>
                     ) : (
-                        <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-                            <Search className="mb-2 h-10 w-10" />
-                            <p>Search for anything using natural language</p>
-                            <p className="text-sm">Examples: "Latest AI news", "JavaScript array methods", "Climate change data"</p>
+                        <div className="flex h-full flex-col items-center justify-center text-center text-foreground">
+                            <Search className="mb-2 h-10 w-10 text-foreground" />
+                            <p className="text-foreground">Search for anything using natural language</p>
+                            <p className="text-sm text-foreground">Examples: "Latest AI news", "JavaScript array methods", "Climate change data"</p>
                         </div>
                     )}
                 </div>
