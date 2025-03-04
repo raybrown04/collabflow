@@ -12,6 +12,102 @@ The project currently uses the following MCP servers:
 4. **sequentialthinking** - For structured problem-solving
 5. **firecrawl-mcp** - For web scraping and content extraction
 6. **browser-tools** - For browser debugging and testing
+7. **21st-dev-magic-mcp** - For UI component generation and logo integration
+
+## 21st.dev Magic Component Builder
+
+The 21st-dev-magic-mcp server provides powerful tools for rapidly generating UI components and integrating brand logos into your application.
+
+### UI Component Generation
+
+Use the 21st_magic_component_builder tool to generate React UI components based on natural language descriptions:
+
+```typescript
+// Generate a UI component
+const componentResult = await use_mcp_tool({
+  server_name: '21st-dev-magic-mcp',
+  tool_name: '21st_magic_component_builder',
+  arguments: {
+    message: "Create a responsive pricing card component with a title, price, feature list, and a call-to-action button",
+    searchQuery: "pricing card"
+  }
+});
+
+// The result contains the component code that can be saved to a file
+// Example usage:
+// await filesystem.write_to_file({
+//   path: "src/components/ui/pricing-card.tsx",
+//   content: componentResult.content
+// });
+```
+
+Key features:
+- Generates Tailwind CSS and Radix UI based components
+- Components follow modern React patterns with TypeScript support
+- Supports responsive design out of the box
+- Can be triggered with "/ui", "/21", or "/21st" commands in chat
+
+### Logo Integration
+
+Use the logo_search tool to find and integrate brand logos into your application:
+
+```typescript
+// Search for company logos
+const logoResult = await use_mcp_tool({
+  server_name: '21st-dev-magic-mcp',
+  tool_name: 'logo_search',
+  arguments: {
+    queries: ["github", "discord", "slack"],
+    format: "TSX" // Options: "JSX", "TSX", "SVG"
+  }
+});
+
+// The result contains the logo components that can be saved to files
+// Example usage:
+// await filesystem.write_to_file({
+//   path: "src/components/icons/github-icon.tsx",
+//   content: logoResult.logos.github.component
+// });
+```
+
+Key features:
+- Supports multiple logo formats (JSX, TSX, SVG)
+- Returns properly named components (e.g., GitHubIcon)
+- Includes import instructions
+- Can search for multiple logos in a single request
+
+### Best Practices for 21st.dev Integration
+
+1. **Component Organization**:
+   - Store generated components in `src/components/ui/` directory
+   - Keep logo components in `src/components/icons/` directory
+
+2. **Customization**:
+   - Customize generated components to match your project's design system
+   - Adjust Tailwind classes to maintain consistency with existing components
+
+3. **Memory Integration**:
+   - Store frequently used component patterns in the memory graph for reuse
+   - Example:
+   ```typescript
+   await use_mcp_tool({
+     server_name: 'github.com/modelcontextprotocol/servers/tree/main/src/memory',
+     tool_name: 'create_entities',
+     arguments: {
+       entities: [
+         {
+           name: "PricingCardComponent",
+           entityType: "UIComponent",
+           observations: [
+             "Generated with 21st_magic_component_builder",
+             "Uses Tailwind CSS and Radix UI",
+             "Component code: <component code here>"
+           ]
+         }
+       ]
+     }
+   });
+   ```
 
 ## Integration Patterns
 

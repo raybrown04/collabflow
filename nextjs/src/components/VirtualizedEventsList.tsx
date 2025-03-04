@@ -180,7 +180,7 @@ export const VirtualizedEventsList = forwardRef<VirtualizedEventsListRef, Virtua
 
     return (
         <div
-            className="h-full overflow-auto pt-2 scroll-smooth"
+            className="h-full overflow-auto scroll-smooth"
             ref={containerRef}
             data-testid="events-list-container"
         >

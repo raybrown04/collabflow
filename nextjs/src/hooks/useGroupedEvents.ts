@@ -28,7 +28,7 @@ export function useGroupedEvents(events: CalendarEvent[]) {
         // Process each event and group by date
         events.forEach(event => {
             const eventStartDate = parseISO(event.date);
-            let eventEndDate = event.end_date ? parseISO(event.end_date) : eventStartDate;
+            const eventEndDate = event.end_date ? parseISO(event.end_date) : eventStartDate;
 
             // Create a simple date string (YYYY-MM-DD) as the key for start date
             const startDateKey = format(eventStartDate, "yyyy-MM-dd");

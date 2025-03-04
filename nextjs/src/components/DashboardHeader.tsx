@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth"
 import { ThemeSwitcher } from "@/components/ThemeSwitcher"
+import { Separator } from "@/components/ui/separator"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -57,7 +58,7 @@ export function DashboardHeader({
     }
 
     return (
-        <header className="flex h-[64px] items-center justify-between bg-background pb-[4px] border-b-0 border-none">
+        <header className="flex h-[64px] items-center justify-between bg-background border-b border-border mx-2">
             <div className="flex items-center p-4">
                 <h1 className="text-2xl font-bold">
                     {isProjectPage ? projectName : title}

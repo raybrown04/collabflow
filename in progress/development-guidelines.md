@@ -1,15 +1,14 @@
 # Development Guidelines
 
-This document outlines the key development guidelines for the CollabFlow project, based on the .clinerules file.
+This document provides detailed explanations of the development guidelines established in the .clinerules file.
 
 ## Table of Contents
 - [General Guidelines](#general-guidelines)
-- [Supabase Best Practices](#supabase-best-practices)
-- [Next.js Best Practices](#nextjs-best-practices)
-- [Security & Compliance](#security--compliance)
-- [Performance & User Experience](#performance--user-experience)
-- [Testing & Maintenance](#testing--maintenance)
-- [MCP Server Tools Integration](#mcp-server-tools-integration)
+- [Framework Best Practices](#framework-best-practices)
+- [Quality Attributes](#quality-attributes)
+- [Testing & Deployment](#testing--deployment)
+- [Documentation & Diagrams](#documentation--diagrams)
+- [Tooling & Automation](#tooling--automation)
 
 ---
 
@@ -34,7 +33,9 @@ This document outlines the key development guidelines for the CollabFlow project
 
 ---
 
-## Supabase Best Practices
+## Framework Best Practices
+
+### Supabase
 
 - **Authentication**
   - Utilize Supabase Auth for secure user authentication
@@ -53,9 +54,7 @@ This document outlines the key development guidelines for the CollabFlow project
   - Write efficient queries
   - Implement caching strategies where applicable
 
----
-
-## Next.js Best Practices
+### Next.js
 
 - **Routing & Rendering**
   - Use the Next.js App Router for all new pages
@@ -73,7 +72,9 @@ This document outlines the key development guidelines for the CollabFlow project
 
 ---
 
-## Security & Compliance
+## Quality Attributes
+
+### Security & Compliance
 
 - **Access Control**
   - Enforce the principle of least privilege for user roles
@@ -87,9 +88,7 @@ This document outlines the key development guidelines for the CollabFlow project
   - Implement HTTP-only cookies with secure and SameSite attributes
   - Regularly audit dependencies, credentials, and secrets
 
----
-
-## Performance & User Experience
+### Performance & User Experience
 
 - **Rendering Strategy**
   - Use SSR for fast initial loads
@@ -106,7 +105,9 @@ This document outlines the key development guidelines for the CollabFlow project
 
 ---
 
-## Testing & Maintenance
+## Testing & Deployment
+
+### Testing Approach
 
 - **Test Types**
   - Write unit tests for individual functions
@@ -117,34 +118,68 @@ This document outlines the key development guidelines for the CollabFlow project
   - Keep tests simple with clear purpose
   - Minimize test setup complexity
 
-- **Error Handling Process**
+- **Debugging Workflow**
   - For persistent test failures:
     1. Check memory graph for similar errors using `memory/retrieve`
     2. Use `sequentialthinking/analyze` to break down the problem
     3. Search for solutions with `perplexity/search`
-    4. Store the resolution in memory graph using `memory/store`
+    4. Store the resolution in memory graph for future reference
 
-- **Monitoring & Deployment**
-  - Set up continuous monitoring with logging
+### Continuous Integration
+
+- **Monitoring**
+  - Set up continuous monitoring with logging and error tracking
+  - Perform regular performance audits
+
+- **Deployment**
   - Use CI/CD pipelines for automated testing and deployments
+  - Maintain consistent environment variable management
+  - Document deployment processes and rollback strategies
 
 ---
 
-## MCP Server Tools Integration
+## Documentation & Diagrams
+
+- **Mermaid Diagrams**
+  - Use Mermaid syntax for system workflows and architecture diagrams
+  - Store complex diagrams in the memory graph for easy retrieval
+  - Keep diagrams simple and focused on key concepts
+
+- **Code Documentation**
+  - Write clear inline comments for complex logic
+  - Add block comments to explain the purpose of functions/modules
+  - Document props and return values for all components and functions
+
+- **Maintenance**
+  - Keep documentation up-to-date with code changes
+  - Periodically review and refine documentation
+
+---
+
+## Tooling & Automation
+
+### MCP Tool Integration
 
 - **Memory Graph Usage**
   - Store common error patterns and solutions
   - Save optimized code snippets and design patterns
   - Track successful test configurations
 
-- **Tool Integration**
-  - Use `perplexity/search` for researching coding problems
-  - Use `sequentialthinking/analyze` for structured debugging
-  - Use `supabase/query` for database interactions
-  - Use `firecrawl/crawl` for external data gathering
-  - Use `browser-tools/automate` for browser testing
+- **Specialized Tools**
+  - Use filesystem tools for configuration and log management
+  - Use perplexity for research and documentation
+  - Use sequentialthinking for structured debugging
+  - Use supabase tools for database operations
+  - Use browser-tools for testing and debugging
 
-- **Documentation**
-  - Store documentation templates in memory graph
-  - Use `memory/retrieve` to access existing templates
-  - Keep documentation up-to-date with project changes
+### UI Component Generation
+
+- **21st.dev Integration**
+  - Use 21st-dev-magic-mcp for rapid UI component development
+  - Trigger component generation with "/ui", "/21", or "/21st" commands
+  - Follow Tailwind and Radix UI patterns for consistency
+
+- **Brand Integration**
+  - Use logo_search for brand logo integration
+  - Customize generated components to match the project's design system
+  - Store frequently used component patterns in memory graph

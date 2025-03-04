@@ -2,7 +2,7 @@
 
 /**
  * sidebar-right.tsx
- * Updated: 2/27/2025
+ * Updated: 3/4/2025
  * 
  * This component has been updated to:
  * - Match width with left sidebar and align headers properly
@@ -10,6 +10,7 @@
  * - Keep calendar view options (month and day)
  * - Simplify events list to only display events for selected date
  * - Improve overall design and user experience
+ * - Add consistent horizontal spacing and alignment
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -28,6 +29,7 @@ import { useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/reac
 import { useAuth, supabase } from "@/lib/auth";
 import { AIProjectAssistant } from "./AIProjectAssistant";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { CalendarViewSelector, CalendarViewType } from "./CalendarViewSelector";
 import { MonthView } from "./MonthView";
 import { DayView } from "./DayView";
@@ -198,16 +200,16 @@ export function SidebarRight() {
                 side="right"
                 className="border-l"
             >
-                <div className="flex flex-col gap-4 p-4">
+                <div className="flex flex-col gap-0 p-0">
                     <Tabs
                         defaultValue="calendar"
                         value={activeTab}
                         onValueChange={setActiveTab}
                         className="h-full flex flex-col"
                     >
-                        <div className="flex items-center gap-2 border-b pb-4">
-                            <div className="w-full">
-                                <TabsList className="grid grid-cols-2">
+                        <div className="flex items-center border-b h-[64px] pt-0 pb-0 px-2">
+                            <div className="w-full flex items-center">
+                                <TabsList className="grid grid-cols-2 h-10 w-full">
                                     <TabsTrigger value="calendar" className="text-sm">
                                         <Calendar className="h-4 w-4 mr-2" />
                                         Calendar
@@ -222,7 +224,7 @@ export function SidebarRight() {
 
                         <TabsContent value="calendar" className="flex-1 overflow-hidden flex flex-col">
                             <div className="flex-1 overflow-hidden">
-                                <div className="pb-0 px-0 mb-0">
+                                <div className="pb-0 px-2 mb-0">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center space-x-2">
                                             <h2 className="text-xl font-bold">
@@ -307,19 +309,23 @@ export function SidebarRight() {
                                         </Button>
                                     </div>
 
-                                    <div className={`${showCalendar ? 'block' : 'hidden'} relative z-20 bg-background h-[300px] overflow-hidden mb-0 calendar-widget w-full max-w-full`}>
+                                    <div className={`${showCalendar ? 'block' : 'hidden'} relative z-20 bg-background h-[280px] overflow-hidden mb-0 calendar-widget w-full`}>
                                         {renderCalendarView()}
                                     </div>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto overflow-x-hidden -mt-4 flex flex-col gap-0 max-w-full">
+                                <div className="px-2 mb-2">
+                                    <Separator className="w-[calc(100%-8px)] mx-auto z-10" />
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto overflow-x-hidden -mt-24 pt-4 flex flex-col gap-0 px-2">
                                     {isLoading ? (
                                         <div className="flex items-center justify-center py-4">
                                             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                         </div>
                                     ) : (
                                         <div className="p-0 space-y-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
-                                            <div className="flex-1 overflow-y-auto overflow-x-hidden max-w-full">
+                                            <div className="flex-1 overflow-y-auto overflow-x-hidden w-full">
                                                 {error ? (
                                                     <div className="p-4 text-red-500">
                                                         <p>Error loading events: {error instanceof Error ? error.message : 'Unknown error'}</p>
@@ -339,7 +345,7 @@ export function SidebarRight() {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <div className="h-full flex flex-col gap-0 max-w-full" data-testid="events-list-wrapper">
+                                                    <div className="h-full flex flex-col gap-0 w-full" data-testid="events-list-wrapper">
                                                         <EventsList
                                                             key={selectedDate.toISOString()}
                                                             date={selectedDate}
@@ -356,8 +362,10 @@ export function SidebarRight() {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="assistant" className="flex-1 overflow-hidden p-2">
-                            <AIProjectAssistant />
+                        <TabsContent value="assistant" className="flex-1 overflow-hidden flex flex-col h-full">
+                            <div className="flex-1 overflow-hidden p-2">
+                                <AIProjectAssistant />
+                            </div>
                         </TabsContent>
                     </Tabs>
                 </div>

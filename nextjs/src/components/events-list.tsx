@@ -853,8 +853,8 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
 
     return (
         <div className="h-full flex flex-col w-full max-w-full">
-            <div className="px-0 pt-0 pb-2 flex flex-col h-full w-full max-w-full">
-                <h3 className="text-lg font-bold mb-2">
+            <div className="px-0 pb-2 flex flex-col h-full w-full max-w-full">
+                <h3 className="text-lg font-bold mb-2 mt 16 pt-24">
                     {format(date, "MMM d, yyyy")}
                 </h3>
 

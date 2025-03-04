@@ -36,7 +36,7 @@ export function EventDateGroup({
 
     return (
         <div
-            className="mb-4 pt-6 scroll-mt-16"
+            className="mb-4 pt-2 scroll-mt-16"
             data-date={dateStr}
             id={`date-${dateStr}`}
             data-testid={`date-group-${dateStr}`}

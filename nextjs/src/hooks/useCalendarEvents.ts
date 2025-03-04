@@ -114,7 +114,7 @@ function processRecurringEvents(events: CalendarEvent[]): CalendarEvent[] {
 
         try {
             // Parse the recurrence rule
-            let rruleOptions: any = {};
+            const rruleOptions: any = {};
 
             // Parse FREQ
             const freqMatch = event.recurrence_rule.match(/FREQ=([^;]+)/);

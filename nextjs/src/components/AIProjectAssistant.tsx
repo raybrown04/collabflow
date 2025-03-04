@@ -13,13 +13,15 @@
  * - Persistent conversation history using Supabase
  * 
  * Changes:
+ * - Improved UI with better scrolling behavior
+ * - Fixed layout issues in the sidebar
+ * - Enhanced message display with proper spacing
+ * - Responsive design that expands as conversation grows
  * - Connected to Supabase for message persistence using useAIConversation hook
- * - Added support for different assistant types
- * - Improved error handling and loading states
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Bot, Send, Trash2 } from "lucide-react";
+import { Bot, Send, Trash2, Paperclip, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
@@ -52,16 +54,21 @@ function SuggestedPrompt({
 // Chat message component
 function ChatMessageItem({ message }: { message: AIMessage }) {
     return (
-        <div className={`flex ${message.is_user ? 'justify-end' : 'justify-start'}`}>
+        <div
+            className={`flex ${message.is_user ? "justify-end" : "justify-start"}`}
+        >
             <div
-                className={`max-w-[80%] rounded-lg p-3 ${message.is_user
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
+                className={`max-w-[80%] rounded-lg px-4 py-2 shadow-xs ${message.is_user
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
                     }`}
             >
-                <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-                <div className={`mt-1 text-xs ${message.is_user ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                    {format(new Date(message.created_at), 'h:mm a')}
+                <div className="flex flex-col">
+                    <span className="text-sm whitespace-pre-wrap">{message.content}</span>
+                    <span className={`text-xs mt-1 self-end ${message.is_user ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}>
+                        {format(new Date(message.created_at), "h:mm a")}
+                    </span>
                 </div>
             </div>
         </div>
@@ -81,6 +88,7 @@ export function AIProjectAssistant({
 }: AIProjectAssistantProps) {
     const [input, setInput] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messageContainerRef = useRef<HTMLDivElement>(null);
     const { user } = useAuth();
 
     // Use the AI conversation hook
@@ -138,9 +146,15 @@ export function AIProjectAssistant({
     }
 
     return (
-        <div className="flex h-full flex-col rounded-lg border">
-            <div className="border-b p-3 flex justify-between items-center">
-                <h3 className="font-semibold">{title}</h3>
+        <div className="flex flex-col h-full w-full rounded-lg border overflow-hidden bg-background">
+            {/* Header */}
+            <div className="border-b p-3 flex justify-between items-center bg-muted/30">
+                <div className="flex items-center">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mr-2">
+                        <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-sm">{title}</h3>
+                </div>
                 {messages.length > 0 && (
                     <Button
                         variant="ghost"
@@ -154,7 +168,11 @@ export function AIProjectAssistant({
                 )}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            {/* Messages Area */}
+            <div
+                ref={messageContainerRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
                 {error ? (
                     <div className="flex h-full flex-col items-center justify-center text-center text-red-500">
                         <p>Error loading messages: {error instanceof Error ? error.message : 'Unknown error'}</p>
@@ -198,11 +216,23 @@ export function AIProjectAssistant({
                         {messages.map(message => (
                             <ChatMessageItem key={message.id} message={message} />
                         ))}
+                        {isAddingMessage && (
+                            <div className="flex justify-start">
+                                <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted shadow-xs">
+                                    <div className="flex space-x-2">
+                                        <div className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce"></div>
+                                        <div className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                                        <div className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                 )}
             </div>
 
+            {/* Input Area */}
             <div className="border-t p-3">
                 <form
                     onSubmit={e => {
@@ -216,6 +246,15 @@ export function AIProjectAssistant({
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         disabled={isLoading || isAddingMessage}
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                if (input.trim()) {
+                                    processMessage(input);
+                                }
+                            }
+                        }}
                     />
                     <Button
                         type="submit"

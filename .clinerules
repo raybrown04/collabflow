@@ -4,22 +4,21 @@
 - Follow clean coding principles with modular, DRY, and well-documented code.
 - Use a Git-based workflow with clear commit messages, systematic branching, and multi-environment strategies (local → staging → production).
 - Keep all code and tests simple; avoid unnecessary complexity.
-- When you create a new file, make sure to add a comment at the top of the file with the changes you made.
-- When you update/make changes to a file, make sure to rewrite the comment at the top of the file with the changes you made. If there is no comment, then add one
-- Also break down into smaller components and create a hooks directory to house all the different hooks you're using.
-- React components should not exceed 300 lines. All designs should use a component approach so that they are easier to work on and fix without breaking other features
+- When creating or updating files, add a comment at the top documenting changes made.
+- Break down into smaller components; React components should not exceed 300 lines.
+- Create hooks directory to house all custom hooks for better organization.
+- All designs should use a component approach for easier maintenance and modification.
 
 #############################
-## Supabase Best Practices
+## Framework Best Practices
 #############################
+# Supabase
 - Utilize Supabase Auth for secure user authentication (email/password, OAuth, MFA).
 - Implement Row Level Security (RLS) on sensitive tables to restrict data access.
 - Manage schema changes with migration tools to ensure consistency.
-- Optimize database performance with proper indexes, efficient queries, and caching strategies where applicable.
+- Optimize database performance with proper indexes, efficient queries, and caching strategies.
 
-#############################
-## Next.js Best Practices
-#############################
+# Next.js
 - Use the Next.js App Router and server-side rendering (SSR) for critical pages.
 - Leverage dynamic imports and code splitting (next/dynamic) to optimize performance.
 - Optimize images using the Next.js Image component with responsive sizing and lazy loading.
@@ -27,40 +26,42 @@
 - Maintain a clear file and folder structure following Next.js routing and colocation guidelines.
 
 #############################
-## Security & Compliance
+## Quality Attributes
 #############################
+# Security & Compliance
 - Enforce the principle of least privilege when assigning user roles and restricting database access.
 - Use HTTPS and configure CORS properly to secure client-server communications.
 - Implement HTTP-only cookies with secure and SameSite attributes for session management.
 - Regularly audit and update dependencies, credentials, and secrets.
 
-#############################
-## Performance & User Experience
-#############################
+# Performance & User Experience
 - Prioritize SSR for fast initial loads and use static generation (SSG) or incremental static regeneration (ISR) when appropriate.
 - Implement lazy loading for components and images and make use of code splitting to reduce bundle sizes.
 - Provide clear UI feedback such as loading spinners, notifications, and error boundaries.
 
 #############################
-## Testing & Maintenance
+## Testing & Deployment
 #############################
+# Testing Approach
 - Write unit tests for individual functions, integration tests for API endpoints, and E2E tests for critical user flows.
 - Keep tests simple: each test should have a clear purpose and minimal setup.
-- If a test fails three consecutive times:
-  - Use the `memory/retrieve` tool to check if similar errors have been encountered before.
-  - If no solution is found, use `sequentialthinking/analyze` to break down the problem.
-  - If still unresolved, use `perplexity/search` to look for solutions online.
-- Store the error and its resolution in the memory graph using `memory/store` for future reference.
+- Use the debugging workflow for persistent test failures:
+  1. Check memory graph for similar errors using `memory/retrieve`
+  2. Use `sequentialthinking/analyze` to break down complex problems
+  3. Search for solutions online with `perplexity/search` if needed
+  4. Store the resolution in memory graph for future reference
+
+# Continuous Integration
 - Set up continuous monitoring with logging and error tracking tools.
-- Use CI/CD pipelines to automate testing and deployments, ensuring consistency across environments.
+- Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
+- Document deployment processes and rollback strategies to ensure reliability.
 
 #############################
-## Diagram Documentation (Mermaid)
+## Documentation & Diagrams
 #############################
-- Use Mermaid syntax within fenced code blocks to create clear, concise diagrams for system workflows and architectural overviews.
-- Store complex or frequently used diagrams in the memory graph using `memory/store` for easy retrieval.
-- When referencing a diagram, use `memory/retrieve` to fetch and display it.
-- Keep Mermaid diagrams simple to ensure they aid understanding without adding unnecessary complexity.
+- Use Mermaid syntax for clear, concise diagrams of system workflows and architecture.
+- Store complex diagrams in the memory graph for easy retrieval.
+- Keep diagrams simple to ensure they aid understanding without adding complexity.
 - Example usage:
 ```mermaid
 graph TD
@@ -68,40 +69,32 @@ graph TD
     B --> C{Decision}
     C -- Yes --> D[Action 1]
     C -- No --> E[Action 2]
-
-    Ensure any pages rendering Mermaid diagrams include the necessary script (e.g., via a CDN) for proper diagram generation.
-
-#############################
-MCP Server Tools Integration
-#############################
-Use the memory graph extensively:
-Store common error patterns and their solutions.
-Save optimized code snippets or design patterns.
-Keep track of successful test configurations.
-Use filesystem/read and filesystem/write to manage configuration files or logs.
-Use perplexity/search for researching coding problems or finding documentation.
-Use sequentialthinking/analyze for structured debugging or problem-solving.
-Use supabase/query to interact with the database for data-driven tests or validations.
-Use firecrawl/crawl to gather data from external sources if needed.
-Use browser-tools/automate for automating browser-based tests or tasks.
+```
+- Ensure any pages rendering Mermaid diagrams include the necessary script for diagram generation.
+- Write clear inline comments for complex logic and block comments for functions/modules.
 
 #############################
-Deployment & Continuous Integration
+## Tooling & Automation
 #############################
-Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
-Document deployment processes and rollback strategies to ensure reliability and reproducibility.
+# MCP Tool Integration
+- Use memory graph to store error patterns, code snippets, and test configurations.
+- Use filesystem tools for configuration and log management.
+- Use perplexity for research and documentation.
+- Use sequentialthinking for structured debugging.
+- Use supabase tools for database operations.
+- Use browser-tools for testing and debugging.
+
+# UI Component Generation
+- Use 21st-dev-magic-mcp for rapid UI component development.
+- Trigger component generation with "/ui", "/21", or "/21st" commands.
+- Follow Tailwind and Radix UI patterns for consistency.
+- Use logo_search for brand logo integration.
+- Customize generated components to match the project's design system.
+- Store frequently used component patterns in memory graph.
 
 #############################
-Code Documentation & Commenting
+## Customization and Expansion
 #############################
-Write clear inline comments for complex logic.
-Use block comments to explain the purpose of functions or modules.
-Store documentation templates or frequently used comments in the memory graph for consistency.
-When writing new documentation, check the memory graph for existing templates using memory/retrieve.
-
-#############################
-Customization and Expansion
-#############################
-Update these rules as project requirements evolve.
-Ensure that new modules or features adhere to the established Supabase, Next.js, and general coding guidelines.
-Review and refine these guidelines periodically to incorporate the latest best practices.
+- Update these rules as project requirements evolve.
+- Ensure that new modules adhere to established guidelines.
+- Review and refine these guidelines periodically.
