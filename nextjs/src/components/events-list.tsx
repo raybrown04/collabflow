@@ -31,21 +31,25 @@ interface EventsListProps {
     scrollToDateRef?: React.RefObject<((date: Date) => void) | null>
 }
 
+/**
+ * Updated typeColors to align with RBIIILV Design System
+ * Using the color schema defined in technical-guides.md
+ */
 const typeColors = {
     meeting: {
-        bg: 'bg-blue-500',
-        text: 'text-blue-500',
-        dot: 'bg-blue-500'
+        bg: 'bg-secondary',
+        text: 'text-secondary',
+        dot: 'bg-secondary'
     },
     task: {
-        bg: 'bg-green-500',
-        text: 'text-green-500',
-        dot: 'bg-green-500'
+        bg: 'bg-success',
+        text: 'text-success',
+        dot: 'bg-success'
     },
     reminder: {
-        bg: 'bg-amber-500',
-        text: 'text-amber-500',
-        dot: 'bg-amber-500'
+        bg: 'bg-destructive',
+        text: 'text-destructive',
+        dot: 'bg-destructive'
     }
 }
 
@@ -853,8 +857,8 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
 
     return (
         <div className="h-full flex flex-col w-full max-w-full">
-            <div className="px-0 pb-2 flex flex-col h-full w-full max-w-full">
-                <h3 className="text-lg font-bold mb-2 mt 16 pt-24">
+            <div className="px-0 pb-4 flex flex-col h-full w-full max-w-full">
+                <h3 className="text-lg font-bold mb-4">
                     {format(date, "MMM d, yyyy")}
                 </h3>
 
@@ -863,7 +867,7 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
                         <p className="text-sm text-muted-foreground">No events scheduled for this day.</p>
                     </div>
                 ) : (
-                    <div className="space-y-2 w-full">
+                    <div className="space-y-2 w-full max-h-[calc(100vh-300px)] overflow-y-auto pr-1 scrollable-container">
                         {sortedEvents.map(event => (
                             <DraggableEventCard
                                 key={event.id}

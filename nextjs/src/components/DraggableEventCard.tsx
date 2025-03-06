@@ -28,21 +28,25 @@ interface DraggableEventCardProps {
     onDragEnd?: () => void
 }
 
+/**
+ * Updated typeColors to align with RBIIILV Design System
+ * Using the color schema defined in technical-guides.md
+ */
 const typeColors = {
     meeting: {
-        bg: 'bg-blue-500',
-        text: 'text-blue-500',
-        dot: 'bg-blue-500'
+        bg: 'bg-secondary',
+        text: 'text-secondary',
+        dot: 'bg-secondary'
     },
     task: {
-        bg: 'bg-green-500',
-        text: 'text-green-500',
-        dot: 'bg-green-500'
+        bg: 'bg-success',
+        text: 'text-success',
+        dot: 'bg-success'
     },
     reminder: {
-        bg: 'bg-amber-500',
-        text: 'text-amber-500',
-        dot: 'bg-amber-500'
+        bg: 'bg-destructive',
+        text: 'text-destructive',
+        dot: 'bg-destructive'
     }
 }
 

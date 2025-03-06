@@ -5,20 +5,14 @@ import { ToastProvider } from "../../components/ui/use-toast";
 export default function Page() {
     return (
         <ToastProvider>
-            <div className="flex flex-1 flex-col gap-6 p-6">
-                <h1 className="text-3xl font-bold">Dashboard</h1>
+            <div className="flex flex-1 h-full">
+                {/* Left side - Tasks component taking full height */}
+                <div className="w-full md:w-1/2 border-r flex flex-col h-full">
+                    <TaskList filter="all" maxItems={40} />
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-6">
-                        <div>
-                            <h2 className="text-xl font-semibold mb-4">Tasks</h2>
-                            <div className="space-y-4">
-                                <TaskList filter="today" />
-                                <TaskList filter="upcoming" />
-                            </div>
-                        </div>
-                    </div>
-
+                {/* Right side - Other widgets */}
+                <div className="hidden md:block w-1/2 p-6 space-y-6 overflow-y-auto">
                     <div className="space-y-6">
                         <div>
                             <h2 className="text-xl font-semibold mb-4">AI Quick Search</h2>

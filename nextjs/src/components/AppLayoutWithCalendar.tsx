@@ -1,35 +1,32 @@
 "use client"
 
 /**
- * AppLayout component
+ * AppLayoutWithCalendar component
+ * Created: 3/4/2025
  * 
- * Main layout component for the application that includes the left sidebar
- * and the main content area with the DashboardHeader.
- * 
- * Changes:
- * - Replaced the old header with the new DashboardHeader component
- * - Added support for project-specific pages with isProjectPage and projectName props
- * - Removed the right sidebar and replaced with expandable chat in header
+ * Extended layout component that includes the base AppLayout plus the calendar sidebar.
+ * This is used for app routes that need the calendar functionality.
  */
 
 import { SidebarLeft } from "@/components/sidebar-left"
+import { SidebarRight } from "@/components/sidebar-right"
 import { DashboardHeader } from "@/components/DashboardHeader"
 import {
     SidebarInset,
     SidebarProvider,
 } from "@/components/ui/sidebar"
 
-interface AppLayoutProps {
+interface AppLayoutWithCalendarProps {
     children: React.ReactNode
     isProjectPage?: boolean
     projectName?: string
 }
 
-export default function AppLayout({
+export default function AppLayoutWithCalendar({
     children,
     isProjectPage = false,
     projectName = ""
-}: AppLayoutProps) {
+}: AppLayoutWithCalendarProps) {
     return (
         <SidebarProvider>
             <SidebarLeft />
@@ -42,6 +39,7 @@ export default function AppLayout({
                     {children}
                 </div>
             </SidebarInset>
+            <SidebarRight />
         </SidebarProvider>
     )
 }

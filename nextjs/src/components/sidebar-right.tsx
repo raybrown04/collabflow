@@ -5,8 +5,10 @@
  * Updated: 3/4/2025
  * 
  * This component has been updated to:
+ * - Remove the AI assistant tab (now using expandable chat in header)
+ * - Focus solely on calendar functionality
  * - Match width with left sidebar and align headers properly
- * - Change events list to only show events for the selected date (removed scroll sync)
+ * - Change events list to only show events for the selected date
  * - Keep calendar view options (month and day)
  * - Simplify events list to only display events for selected date
  * - Improve overall design and user experience
@@ -24,11 +26,9 @@ import { EventForm, EventData } from "./EventForm";
 import { useCalendarEvents, useUpdateEvent } from "@/hooks/useCalendarEvents";
 import { Database } from "@/lib/database.types";
 import { format, isSameDay, parseISO } from "date-fns";
-import { ChevronDown, ChevronUp, Calendar, ChevronLeft, ChevronRight, MessageSquare, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth, supabase } from "@/lib/auth";
-import { AIProjectAssistant } from "./AIProjectAssistant";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { CalendarViewSelector, CalendarViewType } from "./CalendarViewSelector";
 import { MonthView } from "./MonthView";
@@ -200,125 +200,141 @@ export function SidebarRight() {
                 side="right"
                 className="border-l"
             >
-                <div className="flex flex-col gap-0 p-0">
-                    <Tabs
-                        defaultValue="calendar"
-                        value={activeTab}
-                        onValueChange={setActiveTab}
-                        className="h-full flex flex-col"
-                    >
-                        <div className="flex items-center border-b h-[64px] pt-0 pb-0 px-2">
-                            <div className="w-full flex items-center">
-                                <TabsList className="grid grid-cols-2 h-10 w-full">
-                                    <TabsTrigger value="calendar" className="text-sm">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        Calendar
-                                    </TabsTrigger>
-                                    <TabsTrigger value="assistant" className="text-sm">
-                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                        Assistant
-                                    </TabsTrigger>
-                                </TabsList>
+                <div className="flex flex-col gap-0 p-0 px-1">
+                    <div className="h-full flex flex-col">
+                        <div className="flex items-center justify-between border-b h-[64px] pt-0 pb-0 px-2">
+                            <div className="flex items-center h-full">
+                                <h2 className="text-xl font-bold flex items-center">
+                                    <Calendar className="h-5 w-5 mr-2" />
+                                    Calendar
+                                </h2>
                             </div>
                         </div>
 
-                        <TabsContent value="calendar" className="flex-1 overflow-hidden flex flex-col">
+                        <div className="flex-1 overflow-hidden flex flex-col">
                             <div className="flex-1 overflow-hidden">
-                                <div className="pb-0 px-2 mb-0">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center space-x-2">
-                                            <h2 className="text-xl font-bold">
-                                                {format(selectedDate, "MMMM yyyy")}
-                                            </h2>
-                                            <CalendarViewSelector
-                                                currentView={calendarView}
-                                                onViewChange={setCalendarView}
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center space-x-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="p-0 h-8 w-8"
-                                                onClick={() => {
-                                                    const prevMonth = new Date(selectedDate);
-                                                    prevMonth.setMonth(prevMonth.getMonth() - 1);
-                                                    handleCalendarSelect(prevMonth);
-                                                }}
-                                            >
-                                                <ChevronLeft className="h-4 w-4" />
-                                            </Button>
-
-                                            {showYearView && (
-                                                <div className="flex items-center space-x-1 overflow-x-auto max-w-[200px] scrollbar-hide">
-                                                    {Array.from({ length: 12 }, (_, i) => {
-                                                        const monthDate = new Date(selectedDate);
-                                                        monthDate.setMonth(i);
-                                                        return monthDate;
-                                                    }).map((monthDate) => (
-                                                        <Button
-                                                            key={format(monthDate, "MMM")}
-                                                            variant={isSameDay(
-                                                                new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
-                                                                new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
-                                                            ) ? "default" : "ghost"}
-                                                            size="sm"
-                                                            className="px-2 py-1 h-auto text-xs"
-                                                            onClick={() => handleCalendarSelect(monthDate)}
-                                                        >
-                                                            {format(monthDate, "MMM")}
-                                                        </Button>
-                                                    ))}
+                                {/* Calendar section with higher z-index to ensure buttons are clickable */}
+                                <div className="pt-2 pb-0 px-2 mb-0 flex flex-col" style={{ position: 'relative', zIndex: 40 }}>
+                                    <div className="calendar-section flex flex-col">
+                                        <div className="flex items-center justify-between mb-0">
+                                            <div className="flex flex-col">
+                                                <h2 className="text-xl font-bold">
+                                                    {format(selectedDate, "MMMM yyyy")}
+                                                </h2>
+                                                <div className="mt-2">
+                                                    <CalendarViewSelector
+                                                        currentView={calendarView}
+                                                        onViewChange={setCalendarView}
+                                                    />
                                                 </div>
-                                            )}
+                                            </div>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="p-0 h-8 w-8"
-                                                onClick={() => {
-                                                    const nextMonth = new Date(selectedDate);
-                                                    nextMonth.setMonth(nextMonth.getMonth() + 1);
-                                                    handleCalendarSelect(nextMonth);
-                                                }}
-                                            >
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex items-center space-x-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="p-0 h-8 w-8 calendar-nav-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log("Previous month button clicked");
+                                                        const prevMonth = new Date(selectedDate);
+                                                        prevMonth.setMonth(prevMonth.getMonth() - 1);
+                                                        handleCalendarSelect(prevMonth);
+                                                    }}
+                                                    aria-label="Previous month"
+                                                    style={{ position: 'relative', zIndex: 45 }}
+                                                >
+                                                    <ChevronLeft className="h-4 w-4" />
+                                                </Button>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="p-0 h-8 w-8 ml-1"
-                                                onClick={showEventFormHandler}
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="p-0 h-8 w-8 calendar-nav-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log("Next month button clicked");
+                                                        const nextMonth = new Date(selectedDate);
+                                                        nextMonth.setMonth(nextMonth.getMonth() + 1);
+                                                        handleCalendarSelect(nextMonth);
+                                                    }}
+                                                    aria-label="Next month"
+                                                    style={{ position: 'relative', zIndex: 45 }}
+                                                >
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="p-0 h-8 w-8 ml-1 calendar-nav-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log("Add event button clicked");
+                                                        showEventFormHandler();
+                                                    }}
+                                                    aria-label="Add event"
+                                                    style={{ position: 'relative', zIndex: 45 }}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+
+                                            <div style={{ position: 'relative', zIndex: 50 }}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="calendar-toggle-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        console.log(`Toggle calendar button clicked. Current state: ${showCalendar}, new state: ${!showCalendar}`);
+                                                        setShowCalendar(!showCalendar);
+                                                    }}
+                                                    aria-label={showCalendar ? "Collapse calendar" : "Expand calendar"}
+                                                    aria-expanded={showCalendar}
+                                                >
+                                                    {showCalendar ? (
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
 
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setShowCalendar(!showCalendar)}
+                                        {/* Always render the calendar but hide it when collapsed */}
+                                        <div
+                                            className="calendar-container flex-shrink-0"
+                                            style={{
+                                                position: 'relative',
+                                                zIndex: 20,
+                                                backgroundColor: 'var(--background)',
+                                                height: showCalendar ? 'auto' : '0',
+                                                opacity: showCalendar ? 1 : 0,
+                                                overflow: 'hidden',
+                                                marginBottom: 0,
+                                                width: '100%',
+                                                transition: 'height 0.2s ease, opacity 0.2s ease'
+                                            }}
                                         >
-                                            {showCalendar ? (
-                                                <ChevronUp className="h-4 w-4" />
-                                            ) : (
-                                                <ChevronDown className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </div>
-
-                                    <div className={`${showCalendar ? 'block' : 'hidden'} relative z-20 bg-background h-[280px] overflow-hidden mb-0 calendar-widget w-full`}>
-                                        {renderCalendarView()}
+                                            {renderCalendarView()}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="px-2 mb-2">
+                                {/* Separator with flexible spacing that adjusts to calendar size */}
+                                <div className="px-2 my-4 flex-shrink-0">
                                     <Separator className="w-[calc(100%-8px)] mx-auto z-10" />
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto overflow-x-hidden -mt-24 pt-4 flex flex-col gap-0 px-2">
+                                {/* Events container with flexible spacing */}
+                                <div
+                                    className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0 px-2 day-events-container"
+                                    style={{
+                                        position: 'relative',
+                                        zIndex: 30
+                                    }}
+                                >
                                     {isLoading ? (
                                         <div className="flex items-center justify-center py-4">
                                             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -360,14 +376,8 @@ export function SidebarRight() {
                                     )}
                                 </div>
                             </div>
-                        </TabsContent>
-
-                        <TabsContent value="assistant" className="flex-1 overflow-hidden flex flex-col h-full">
-                            <div className="flex-1 overflow-hidden p-2">
-                                <AIProjectAssistant />
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+                        </div>
+                    </div>
                 </div>
             </Sidebar>
 

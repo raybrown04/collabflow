@@ -8,15 +8,17 @@
  * 
  * Changes:
  * - Added ThemeSwitcher component for theme switching functionality
+ * - Added AIExpandableChat component for AI assistant functionality
  */
 
 import { useState } from "react"
-import { Search, Bell, User, Settings } from "lucide-react"
+import { Search, Bell, User, Settings, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth"
 import { ThemeSwitcher } from "@/components/ThemeSwitcher"
 import { Separator } from "@/components/ui/separator"
+import { AIExpandableChat } from "@/components/AIExpandableChat"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -76,7 +78,10 @@ export function DashboardHeader({
                     />
                 </form>
 
-                <ThemeSwitcher className="hidden md:block" />
+                <div className="flex items-center gap-2">
+                    <AIExpandableChat position="header" size="lg" />
+                    <ThemeSwitcher className="hidden md:block" />
+                </div>
 
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />

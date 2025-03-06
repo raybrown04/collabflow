@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Trash, Edit, Clock, Calendar } from "lucide-react"
+import { Check, Trash, Edit, Clock, Calendar, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
+import TaskDetailPopup from "./TaskDetailPopup"
 
 export interface Task {
     id: string
@@ -15,10 +16,20 @@ export interface Task {
     completed: boolean
     priority: 'low' | 'medium' | 'high'
     user_id: string
+    list_id?: string | null
+}
+
+export interface TaskList {
+    id: string;
+    name: string;
+    color: string;
+    user_id: string;
+    created_at: string;
 }
 
 interface TaskItemProps {
     task: Task
+    taskLists?: TaskList[]
     onComplete: (id: string, completed: boolean) => void
     onDelete: (id: string) => void
     onEdit: (task: Task) => void
@@ -28,6 +39,7 @@ interface TaskItemProps {
 
 export function TaskItem({
     task,
+    taskLists = [],
     onComplete,
     onDelete,
     onEdit,
@@ -35,6 +47,7 @@ export function TaskItem({
     isOwnedByCurrentUser = true
 }: TaskItemProps) {
     const [isHovered, setIsHovered] = useState(false)
+    // No longer need local state for popup since it's handled by parent
 
     // Format the due date if it exists
     const formattedDueDate = task.due_date
@@ -79,11 +92,11 @@ export function TaskItem({
     const canModify = isAdmin || isOwnedByCurrentUser
 
     return (
-        <Card
+        <div
             className={cn(
-                "p-4 transition-all duration-200",
-                task.completed ? "bg-transparent" :
-                    isOverdue ? "bg-transparent" : "bg-transparent"
+                "px-4 py-2 transition-all duration-200 relative group",
+                task.completed ? "opacity-70" :
+                    isOverdue ? "bg-red-50/10" : "bg-transparent"
             )}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -94,7 +107,10 @@ export function TaskItem({
                         "flex-shrink-0 w-5 h-5 mt-0.5 rounded-full border cursor-pointer flex items-center justify-center",
                         task.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-500"
                     )}
-                    onClick={() => canModify && onComplete(task.id, !task.completed)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (canModify) onComplete(task.id, !task.completed);
+                    }}
                 >
                     {task.completed && <Check className="h-3 w-3 text-white" />}
                 </div>
@@ -117,7 +133,10 @@ export function TaskItem({
                                         variant="ghost"
                                         size="icon"
                                         className="h-6 w-6"
-                                        onClick={() => onEdit(task)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(task);
+                                        }}
                                     >
                                         <Edit className="h-3 w-3" />
                                     </Button>
@@ -125,7 +144,10 @@ export function TaskItem({
                                         variant="ghost"
                                         size="icon"
                                         className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => onDelete(task.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(task.id);
+                                        }}
                                     >
                                         <Trash className="h-3 w-3" />
                                     </Button>
@@ -133,6 +155,8 @@ export function TaskItem({
                             )}
                         </div>
                     </div>
+
+                    {/* Task list indicator removed from here - will be shown where date was */}
 
                     {task.description && (
                         <p className={cn(
@@ -143,21 +167,20 @@ export function TaskItem({
                         </p>
                     )}
 
-                    {formattedDueDate && (
-                        <div className="flex items-center mt-2 text-xs text-foreground">
-                            {isOverdue ? (
-                                <Clock className="h-3 w-3 mr-1 text-red-500" />
-                            ) : (
-                                <Calendar className="h-3 w-3 mr-1" />
-                            )}
-                            <span className={cn(
-                                isToday ? "text-red-500 font-medium" : "",
-                                task.completed && "line-through"
-                            )}>
-                                {isToday ? "Today" : isTomorrow ? "Tomorrow" : formattedDay || formattedDueDate}
-                            </span>
-                        </div>
-                    )}
+                    {/* Replace date display with task list indicator */}
+                    <div className="flex items-center mt-2 text-xs text-foreground">
+                        {/* Use Tag icon instead of Clock/Calendar */}
+                        <Tag className="h-3 w-3 mr-1" />
+
+                        <span className={cn(
+                            "font-medium",
+                            task.completed && "line-through"
+                        )}>
+                            {task.list_id && taskLists.find(list => list.id === task.list_id)
+                                ? taskLists.find(list => list.id === task.list_id)?.name
+                                : "Personal"}
+                        </span>
+                    </div>
 
                     {!isOwnedByCurrentUser && (
                         <div className="mt-2 text-xs text-gray-500 italic">
@@ -166,7 +189,15 @@ export function TaskItem({
                     )}
                 </div>
             </div>
-        </Card>
+
+            {/* Click to open task details - calls the parent's onEdit function */}
+            <div
+                className="absolute inset-0 cursor-pointer"
+                onClick={() => onEdit(task)}
+            ></div>
+
+            {/* Task detail popup is now handled by the parent (TaskList) component */}
+        </div>
     )
 }
 

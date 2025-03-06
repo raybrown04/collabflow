@@ -413,6 +413,39 @@
     @apply bg-muted-foreground/50;
 }
 
+/* Scrollable container for event lists */
+.scrollable-container {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+}
+
+/* Ensure the scrollable container works in the sidebar */
+.sidebar-right .scrollable-container {
+    max-height: 400px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* For smoother scrolling on iOS */
+}
+
+/* Day events container in the sidebar */
+.day-events-container {
+    position: relative;
+    z-index: 30;
+}
+
+/* Make sure events are visible and scrollable */
+.day-events-container .scrollable-container {
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    z-index: 30;
+    background-color: inherit;
+}
+
 /* CSS Grid-based Transitions for Expandable Menu Items */
 .menu-item>div {
     display: grid;

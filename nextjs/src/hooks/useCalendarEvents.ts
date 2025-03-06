@@ -2,12 +2,13 @@
 
 /**
  * useCalendarEvents.ts
- * Updated: 2/27/2025
+ * Updated: 3/4/2025
  * 
  * This hook has been updated to fix TypeScript issues with null values vs undefined.
  * Fixed scrolling-related issues for better interaction with event selections.
  * Added more detailed development mode test events for better testing.
  * Made date parameter optional with a default value of current date.
+ * Added support for storing newly created events in development mode.
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +28,10 @@ export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row
     multiDayContinuation?: boolean;
     updated_at?: string | null;
 };
+
+// Store test events in memory for development mode
+let testEventsCache: CalendarEvent[] = [];
+let testEventsInitialized = false;
 
 export const useCalendarEvents = (date?: Date) => {
     const [isFetching, setIsFetching] = useState(false);
@@ -48,7 +53,14 @@ export const useCalendarEvents = (date?: Date) => {
                 // For development, we'll use test data
                 if (process.env.NODE_ENV === "development") {
                     console.log("Development mode: Returning all test events");
-                    return generateTestEvents();
+
+                    // Initialize test events cache if not already done
+                    if (!testEventsInitialized) {
+                        testEventsCache = generateTestEvents();
+                        testEventsInitialized = true;
+                    }
+
+                    return testEventsCache;
                 }
 
                 // For production, fetch from the database
@@ -406,6 +418,16 @@ export const useUpdateEvent = () => {
             // For development, just console log
             if (process.env.NODE_ENV === "development") {
                 console.log("Development mode: Event update simulation", event);
+
+                // Update the event in the test events cache
+                if (testEventsInitialized) {
+                    const index = testEventsCache.findIndex(e => e.id === event.id);
+                    if (index !== -1) {
+                        testEventsCache[index] = { ...testEventsCache[index], ...event };
+                        console.log("Updated event in test events cache");
+                    }
+                }
+
                 return event;
             }
 
@@ -436,10 +458,24 @@ export const useCreateEvent = () => {
 
     return useMutation({
         mutationFn: async (event: Omit<CalendarEvent, "id" | "created_at" | "updated_at">) => {
-            // For development, just console log
+            // For development, add to test events cache
             if (process.env.NODE_ENV === "development") {
                 console.log("Development mode: Event creation simulation", event);
-                return { ...event, id: Math.random().toString(36).substr(2, 9) };
+
+                const newEvent = {
+                    ...event,
+                    id: Math.random().toString(36).substr(2, 9),
+                    created_at: new Date().toISOString(),
+                    updated_at: null
+                } as CalendarEvent;
+
+                // Add to test events cache
+                if (testEventsInitialized) {
+                    testEventsCache.push(newEvent);
+                    console.log("Added event to test events cache. New count:", testEventsCache.length);
+                }
+
+                return newEvent;
             }
 
             // For production, insert into the database
@@ -474,6 +510,13 @@ export const useDeleteEvent = () => {
             // For development, just console log
             if (process.env.NODE_ENV === "development") {
                 console.log(`Development mode: ${isRecurringInstance ? 'Recurring instance' : 'Event'} deletion simulation`, id);
+
+                // Remove the event from the test events cache
+                if (testEventsInitialized) {
+                    testEventsCache = testEventsCache.filter(e => e.id !== id);
+                    console.log("Removed event from test events cache");
+                }
+
                 return { id };
             }
 
@@ -532,6 +575,20 @@ export const useUpdateEventDate = () => {
                     date: newDateString,
                     end_date: newEndDateString
                 });
+
+                // Update the event in the test events cache
+                if (testEventsInitialized) {
+                    const index = testEventsCache.findIndex(e => e.id === event.id);
+                    if (index !== -1) {
+                        testEventsCache[index] = {
+                            ...testEventsCache[index],
+                            date: newDateString,
+                            end_date: newEndDateString || testEventsCache[index].end_date
+                        };
+                        console.log("Updated event date in test events cache");
+                    }
+                }
+
                 return { ...event, date: newDateString, end_date: newEndDateString };
             }
 

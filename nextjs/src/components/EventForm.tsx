@@ -268,7 +268,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-4 py-2 text-sm text-black dark:text-white ring-offset-background transition-[border-color,box-shadow] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-black dark:file:text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         required
                     />
                 </div>
@@ -282,7 +282,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                        className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                         rows={3}
                     />
                 </div>
@@ -330,7 +330,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                     name="recurrence-frequency"
                                     value={recurrenceFrequency}
                                     onChange={(e) => setRecurrenceFrequency(e.target.value as any)}
-                                    className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                                    className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                                 >
                                     <option value="daily">Daily</option>
                                     <option value="weekly">Weekly</option>
@@ -352,7 +352,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         max="99"
                                         value={recurrenceInterval}
                                         onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                                        className="w-20 rounded-md border px-3 py-2 bg-background text-foreground"
+                                        className="w-20 rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                                     />
                                     <span className="ml-2">
                                         {recurrenceFrequency === "daily" && "day(s)"}
@@ -432,7 +432,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         max="999"
                                         value={recurrenceCount}
                                         onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
-                                        className="w-20 rounded-md border px-3 py-2 bg-background text-foreground"
+                                        className="w-20 rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                                         disabled={recurrenceEndType !== "after"}
                                     />
                                     <span className="ml-2">occurrence(s)</span>
@@ -456,8 +456,9 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                         name="recurrence-end-date"
                                         value={format(recurrenceEndDate, "yyyy-MM-dd")}
                                         onChange={(e) => setRecurrenceEndDate(new Date(e.target.value))}
-                                        className="rounded-md border px-3 py-2 bg-background text-foreground"
+                                        className="rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                                         disabled={recurrenceEndType !== "on"}
+                                        style={{ colorScheme: 'light dark', color: 'inherit' }} /* Fix for pink date input text */
                                     />
                                 </div>
                             </div>
@@ -475,7 +476,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="event-type"
                             value={type}
                             onChange={(e) => setType(e.target.value as "meeting" | "task" | "reminder")}
-                            className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                            className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
                         >
                             <option value="meeting">Meeting</option>
                             <option value="task">Task</option>
@@ -494,7 +495,8 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 name="start-time"
                                 value={startTime}
                                 onChange={(e) => setStartTime(e.target.value)}
-                                className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                                className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
+                                style={{ colorScheme: 'light dark', color: 'inherit' }} /* Fix for pink time input text */
                             />
                         </div>
                     )}
@@ -511,7 +513,8 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="end-date"
                             value={format(endDate, "yyyy-MM-dd")}
                             onChange={(e) => setEndDate(new Date(e.target.value))}
-                            className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                            className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
+                            style={{ colorScheme: 'light dark', color: 'inherit' }} /* Fix for pink date input text */
                         />
                     </div>
                     {!isAllDay && (
@@ -525,7 +528,8 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 name="end-time"
                                 value={endTime}
                                 onChange={(e) => setEndTime(e.target.value)}
-                                className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
+                                className="w-full rounded-md border px-3 py-2 bg-background text-black dark:text-white"
+                                style={{ colorScheme: 'light dark', color: 'inherit' }} /* Fix for pink time input text */
                             />
                         </div>
                     )}
@@ -541,8 +545,8 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                         name="event-location"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2 bg-background text-foreground"
-                        placeholder="Add location"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-4 py-2 text-sm text-black dark:text-white ring-offset-background transition-[border-color,box-shadow] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-black dark:file:text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Add Location"
                     />
                 </div>
 
@@ -557,8 +561,8 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                             name="invitee-email"
                             value={inviteInput}
                             onChange={(e) => setInviteInput(e.target.value)}
-                            className="flex-1 rounded-l-md border px-3 py-2 bg-background text-foreground"
-                            placeholder="Add email address"
+                            className="flex-1 h-9 rounded-l-md border border-input bg-background px-4 py-2 text-sm text-black dark:text-white ring-offset-background transition-[border-color,box-shadow] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-black dark:file:text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Add Email Address"
                         />
                         <Button
                             type="button"

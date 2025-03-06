@@ -23,6 +23,7 @@ export interface Task {
     priority: "low" | "medium" | "high";
     created_at: string;
     user_id: string;
+    list_id?: string | null;
 }
 
 // Mock tasks for development mode
@@ -35,7 +36,8 @@ const mockTasks: Task[] = [
         completed: false,
         priority: "high",
         created_at: new Date().toISOString(),
-        user_id: "dev-user"
+        user_id: "dev-user",
+        list_id: "list-1" // Personal
     },
     {
         id: "dev-2",
@@ -45,7 +47,8 @@ const mockTasks: Task[] = [
         completed: false,
         priority: "medium",
         created_at: new Date().toISOString(),
-        user_id: "dev-user"
+        user_id: "dev-user",
+        list_id: "list-2" // Work
     },
     {
         id: "dev-3",
@@ -55,7 +58,8 @@ const mockTasks: Task[] = [
         completed: false,
         priority: "high",
         created_at: new Date().toISOString(),
-        user_id: "dev-user"
+        user_id: "dev-user",
+        list_id: "list-2" // Work
     },
     {
         id: "dev-4",
@@ -65,7 +69,8 @@ const mockTasks: Task[] = [
         completed: false,
         priority: "low",
         created_at: new Date().toISOString(),
-        user_id: "dev-user"
+        user_id: "dev-user",
+        list_id: "list-1" // Personal
     },
     {
         id: "dev-5",
@@ -75,7 +80,8 @@ const mockTasks: Task[] = [
         completed: true,
         priority: "medium",
         created_at: new Date().toISOString(),
-        user_id: "dev-user"
+        user_id: "dev-user",
+        list_id: "list-4" // Stoneys
     }
 ];
 

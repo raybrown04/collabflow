@@ -66,8 +66,8 @@ const mockMessages: Record<string, AIMessage[]> = {
     ]
 };
 
-// Development mode detection
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+// Development mode detection - using a consistent value for server and client
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 /**
  * Fetch AI messages from Supabase
