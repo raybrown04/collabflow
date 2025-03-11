@@ -78,10 +78,10 @@ export function TaskDetailPopup({
         setSubtasks([])
     }
 
-    // Handle form submission
-    const handleSave = () => {
-        if (!task) return
-        if (!title.trim()) return
+    // Create a task update object
+    const createUpdatedTask = () => {
+        if (!task) return null
+        if (!title.trim()) return null
 
         let dueDateTime = null
         if (dueDate) {
@@ -93,7 +93,7 @@ export function TaskDetailPopup({
             dueDateTime = dateObj.toISOString()
         }
 
-        const updatedTask: Task = {
+        return {
             ...task,
             title,
             description,
@@ -101,8 +101,24 @@ export function TaskDetailPopup({
             priority,
             list_id: listId
         }
-
-        onUpdate(updatedTask)
+    }
+    
+    // Auto-save without closing popup
+    const handleAutoSave = () => {
+        const updatedTask = createUpdatedTask()
+        if (updatedTask) {
+            onUpdate(updatedTask)
+        }
+    }
+    
+    // Handle form submission - save and close
+    const handleSave = () => {
+        const updatedTask = createUpdatedTask()
+        if (updatedTask) {
+            onUpdate(updatedTask)
+            // Close the popup after saving
+            setIsOpen(false)
+        }
     }
 
     // Handle task delete
@@ -115,7 +131,26 @@ export function TaskDetailPopup({
     // Handle task completion toggle
     const handleComplete = () => {
         if (!task) return
-        onComplete(task.id, !task.completed)
+        
+        // Toggle completion status
+        const newCompletedStatus = !task.completed
+        
+        // Call the onComplete callback
+        onComplete(task.id, newCompletedStatus)
+        
+        // Auto-save and close the popup
+        const updatedTask: Task = {
+            ...task,
+            title,
+            description,
+            due_date: task.due_date,
+            priority,
+            list_id: listId,
+            completed: newCompletedStatus
+        }
+        
+        onUpdate(updatedTask)
+        setIsOpen(false)
     }
 
     // Add subtask
@@ -152,11 +187,11 @@ export function TaskDetailPopup({
     // Get the current task list
     const currentList = taskLists.find(list => list.id === listId)
 
-    // Auto-save on form field changes
+    // Auto-save on form field changes (without closing popup)
     useEffect(() => {
         const debounceTimer = setTimeout(() => {
             if (isOpen && task) {
-                handleSave()
+                handleAutoSave()
             }
         }, 1000)
 
@@ -169,12 +204,25 @@ export function TaskDetailPopup({
 
         let dueDateTime = null
         if (dueDate) {
+            // Create a date object from the date string
             const dateObj = new Date(dueDate)
+            
+            // Set the time if provided
             if (dueTime) {
                 const [hours, minutes] = dueTime.split(":").map(Number)
                 dateObj.setHours(hours, minutes)
+            } else {
+                // If no time is provided, set to noon to avoid timezone issues
+                dateObj.setHours(12, 0, 0, 0)
             }
+            
+            // Convert to ISO string
             dueDateTime = dateObj.toISOString()
+            
+            // Debug: Log the date object and ISO string
+            console.log("Creating task with date:", dueDate)
+            console.log("Date object:", dateObj)
+            console.log("ISO string:", dueDateTime)
         }
 
         const newTask = {
@@ -185,6 +233,9 @@ export function TaskDetailPopup({
             priority,
             list_id: listId
         }
+        
+        // Debug: Log the new task
+        console.log("Creating new task:", newTask)
 
         onCreate(newTask)
         setIsOpen(false)
@@ -193,7 +244,7 @@ export function TaskDetailPopup({
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh]">
+            <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh] bg-white text-black">
                 <DialogHeader>
                     <DialogTitle className="flex-1">
                         {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}
@@ -214,12 +265,12 @@ export function TaskDetailPopup({
                                     {task.completed && <Check className="h-4 w-4 text-white" />}
                                 </div>
                                 <DialogTitle className="flex-1">
-                                    <Input
-                                        className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        placeholder="Task title"
-                                    />
+                                <Input
+                                    className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Task title"
+                                />
                                 </DialogTitle>
                             </div>
                         </DialogHeader>
@@ -232,7 +283,7 @@ export function TaskDetailPopup({
                                     <select
                                         value={listId || ''}
                                         onChange={(e) => setListId(e.target.value || null)}
-                                        className="w-full px-3 py-2 border rounded-md text-sm"
+                                        className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
                                     >
                                         <option value="">No List</option>
                                         {taskLists.map((list) => (
@@ -248,7 +299,7 @@ export function TaskDetailPopup({
                                     <select
                                         value={priority}
                                         onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                                        className="w-full px-3 py-2 border rounded-md text-sm"
+                                        className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
                                     >
                                         <option value="low">Low</option>
                                         <option value="medium">Medium</option>
@@ -267,13 +318,13 @@ export function TaskDetailPopup({
                                         type="date"
                                         value={dueDate}
                                         onChange={(e) => setDueDate(e.target.value)}
-                                        className="text-sm"
+                                        className="text-sm text-foreground"
                                     />
                                     <Input
                                         type="time"
                                         value={dueTime}
                                         onChange={(e) => setDueTime(e.target.value)}
-                                        className="text-sm"
+                                        className="text-sm text-foreground"
                                     />
                                 </div>
                             </div>
@@ -285,7 +336,7 @@ export function TaskDetailPopup({
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Add notes here..."
-                                    className="min-h-24 text-sm"
+                                    className="min-h-24 text-sm text-foreground"
                                 />
                             </div>
 
@@ -329,7 +380,7 @@ export function TaskDetailPopup({
                                             placeholder="Add a subtask..."
                                             value={newSubtask}
                                             onChange={(e) => setNewSubtask(e.target.value)}
-                                            className="text-sm"
+                                            className="text-sm text-foreground"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     e.preventDefault()
@@ -359,14 +410,21 @@ export function TaskDetailPopup({
                                 </div>
                             </div>
 
-                            {/* Footer with Delete Button */}
-                            <div className="flex justify-end gap-2 border-t pt-4">
+                            {/* Footer with Delete and Save Buttons */}
+                            <div className="flex justify-between gap-2 border-t pt-4">
                                 <Button
-                                    variant="destructive"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                     onClick={handleDelete}
                                 >
-                                    <Trash className="h-4 w-4 mr-1" />
-                                    Delete Task
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="default"
+                                    onClick={handleSave}
+                                >
+                                    Save
                                 </Button>
                             </div>
                         </div>
@@ -382,31 +440,19 @@ export function TaskDetailPopup({
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Task title"
+                                className="text-foreground"
                                 required
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <label htmlFor="description" className="text-sm font-medium">
-                                Description
-                            </label>
-                            <Textarea
-                                id="description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Task description (optional)"
-                                rows={3}
-                                className="min-h-24 text-sm"
-                            />
-                        </div>
-
+                        {/* List and Priority Selectors */}
                         <div className="flex gap-3">
                             <div className="flex-1">
                                 <label className="text-sm font-medium mb-1 block">List</label>
                                 <select
                                     value={listId || ''}
                                     onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full px-3 py-2 border rounded-md text-sm"
+                                    className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
                                 >
                                     <option value="">No List</option>
                                     {taskLists.map((list) => (
@@ -422,7 +468,7 @@ export function TaskDetailPopup({
                                 <select
                                     value={priority}
                                     onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                                    className="w-full px-3 py-2 border rounded-md text-sm"
+                                    className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
                                 >
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
@@ -431,6 +477,7 @@ export function TaskDetailPopup({
                             </div>
                         </div>
 
+                        {/* Due Date */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium">Due Date</label>
@@ -440,14 +487,95 @@ export function TaskDetailPopup({
                                     type="date"
                                     value={dueDate}
                                     onChange={(e) => setDueDate(e.target.value)}
-                                    className="text-sm"
+                                    className="text-sm text-foreground"
                                 />
                                 <Input
                                     type="time"
                                     value={dueTime}
                                     onChange={(e) => setDueTime(e.target.value)}
-                                    className="text-sm"
+                                    className="text-sm text-foreground"
                                 />
+                            </div>
+                        </div>
+
+                        {/* Notes Section */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Notes</label>
+                            <Textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Add notes here..."
+                                className="min-h-24 text-sm text-foreground"
+                            />
+                        </div>
+
+                        {/* Subtasks Section */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium">Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})</label>
+                            </div>
+
+                            <div className="space-y-2">
+                                {subtasks.map((subtask) => (
+                                    <div key={subtask.id} className="flex items-center gap-2">
+                                        <div
+                                            className={cn(
+                                                "flex-shrink-0 w-5 h-5 rounded-full border cursor-pointer flex items-center justify-center",
+                                                subtask.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-500"
+                                            )}
+                                            onClick={() => toggleSubtaskCompletion(subtask.id)}
+                                        >
+                                            {subtask.completed && <Check className="h-3 w-3 text-white" />}
+                                        </div>
+                                        <span className={cn(
+                                            "flex-1 text-sm",
+                                            subtask.completed && "line-through text-gray-500"
+                                        )}>
+                                            {subtask.text}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-red-500 hover:text-red-700"
+                                            onClick={() => deleteSubtask(subtask.id)}
+                                        >
+                                            <Trash className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                ))}
+
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        placeholder="Add a subtask..."
+                                        value={newSubtask}
+                                        onChange={(e) => setNewSubtask(e.target.value)}
+                                        className="text-sm text-foreground"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                handleAddSubtask()
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleAddSubtask}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Attachments Section */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Attachments</label>
+                            <div className="border border-dashed rounded-md p-4 text-center">
+                                <p className="text-xs text-gray-500">
+                                    Click to add / drop your files here
+                                </p>
                             </div>
                         </div>
 
