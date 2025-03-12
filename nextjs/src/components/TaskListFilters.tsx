@@ -44,7 +44,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
         <div className="py-2">
             {/* Status filter section - collapsible */}
             <div 
-                className="px-4 py-2 text-sm font-medium border-b flex items-center justify-between cursor-pointer"
+                className="px-4 py-2 text-sm flex items-center justify-between cursor-pointer"
                 onClick={() => setStatusSectionCollapsed(!statusSectionCollapsed)}
             >
                 <span>Status</span>
@@ -57,7 +57,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
                 <div className="px-2 py-1">
                     <button 
                         className={cn(
-                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between",
+                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between text-sm",
                             statusFilter === 'all' ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
                         )}
                         onClick={() => handleStatusSelect('all')}
@@ -67,7 +67,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
                     </button>
                     <button 
                         className={cn(
-                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between",
+                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between text-sm",
                             statusFilter === 'completed' ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
                         )}
                         onClick={() => handleStatusSelect('completed')}
@@ -77,7 +77,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
                     </button>
                     <button 
                         className={cn(
-                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between",
+                            "w-full text-left py-1.5 px-2 rounded flex items-center justify-between text-sm",
                             statusFilter === 'incomplete' ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
                         )}
                         onClick={() => handleStatusSelect('incomplete')}
@@ -90,7 +90,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
             
             {/* Lists filter section - collapsible */}
             <div 
-                className="px-4 py-2 text-sm font-medium border-b mt-2 flex items-center justify-between cursor-pointer"
+                className="px-4 py-2 text-sm flex items-center justify-between cursor-pointer"
                 onClick={() => setListsSectionCollapsed(!listsSectionCollapsed)}
             >
                 <span>My Lists</span>
@@ -105,7 +105,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
                         <button
                             key={list.id}
                             className={cn(
-                                "w-full text-left py-1.5 px-2 rounded flex items-center justify-between",
+                                "w-full text-left py-1.5 px-2 rounded flex items-center justify-between text-sm",
                                 listFilter === list.id ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
                             )}
                             onClick={() => handleListSelect(list.id)}
