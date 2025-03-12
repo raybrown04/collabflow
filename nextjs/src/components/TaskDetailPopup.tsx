@@ -5,10 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Check, Trash, Calendar, Clock, Plus } from "lucide-react"
-import { format } from "date-fns"
+import { Check, Trash, Plus, Bell } from "lucide-react"
+import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Task, TaskList } from "./TaskItem"
+import { ReminderDialog } from "./ReminderDialog"
+import { RecurringDialog } from "./RecurringDialog"
+import { DueDateDialog } from "./DueDateDialog"
 
 interface TaskDetailPopupProps {
     task: Task | null
@@ -36,46 +39,98 @@ export function TaskDetailPopup({
     // Form state
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
-    const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
     const [listId, setListId] = useState<string | null>(null)
     const [dueDate, setDueDate] = useState("")
-    const [dueTime, setDueTime] = useState("")
     const [newSubtask, setNewSubtask] = useState("")
     const [subtasks, setSubtasks] = useState<{ id: string; text: string; completed: boolean }[]>([])
+    const [isRecurring, setIsRecurring] = useState(false)
+    const [recurrenceFrequency, setRecurrenceFrequency] = useState<"daily" | "weekly" | "monthly" | "yearly">("weekly")
+    const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+    const [completed, setCompleted] = useState(false)
+    const [isCompletionAnimating, setIsCompletionAnimating] = useState(false)
+    
+    // Reminder state
+    const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false)
+    const [reminderDate, setReminderDate] = useState<string>("")
+    const [reminderTime, setReminderTime] = useState<string>("")
+    const [hasReminder, setHasReminder] = useState(false)
+    
+    // Recurring dialog state
+    const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false)
+    const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null)
+    
+    // Due Date dialog state
+    const [isDueDateDialogOpen, setIsDueDateDialogOpen] = useState(false)
+    const [dueTime, setDueTime] = useState<string>("09:00")
 
-    // Update form fields when task changes
+    // Debug logs for date synchronization
     useEffect(() => {
-        if (task) {
-            setTitle(task.title)
-            setDescription(task.description || "")
-            setPriority(task.priority)
-            setListId(task.list_id || null)
-
-            if (task.due_date) {
-                const date = new Date(task.due_date)
-                setDueDate(format(date, "yyyy-MM-dd"))
-                setDueTime(format(date, "HH:mm"))
-            } else {
-                setDueDate("")
-                setDueTime("")
-            }
-
-            // In a real app, we'd fetch subtasks here
-            setSubtasks([])
-        } else {
-            resetForm()
-        }
-    }, [task])
+        console.log(`[TaskDetailPopup] dueDate updated: ${dueDate}`);
+        console.log(`[TaskDetailPopup] reminderDate: ${reminderDate}`);
+    }, [dueDate, reminderDate]);
 
     // Reset form fields
     const resetForm = () => {
         setTitle("")
         setDescription("")
         setDueDate("")
-        setDueTime("")
-        setPriority("medium")
         setListId(null)
         setSubtasks([])
+        setIsRecurring(false)
+        setHasReminder(false)
+        setReminderDate("")
+        setReminderTime("")
+        setCompleted(false)
+    }
+
+    // Load task data when task changes
+    useEffect(() => {
+        if (task) {
+            setTitle(task.title || "")
+            setDescription(task.description || "")
+            setListId(task.list_id || null)
+            
+            // Properly format the due date using UTC date components to preserve the actual date
+            if (task.due_date) {
+                const date = new Date(task.due_date);
+                const year = date.getUTCFullYear();
+                const month = date.getUTCMonth() + 1; // getUTCMonth is 0-based
+                const day = date.getUTCDate();
+                
+                // Format as YYYY-MM-DD for the date input
+                const formattedDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                console.log(`[TaskDetailPopup] Formatting due date from ${task.due_date} to ${formattedDate}`);
+                
+                setDueDate(formattedDate);
+            } else {
+                setDueDate("");
+            }
+            
+            setCompleted(task.completed || false)
+            // Load subtasks if available
+            if (task.subtasks) {
+                setSubtasks(task.subtasks)
+            } else {
+                setSubtasks([])
+            }
+        } else {
+            resetForm()
+        }
+    }, [task])
+
+    // Handle completion toggle with animation
+    const handleCompleteToggle = () => {
+        setIsCompletionAnimating(true)
+        const newCompletedState = !completed
+        setCompleted(newCompletedState)
+        
+        if (task) {
+            onComplete(task.id, newCompletedState)
+        }
+        
+        setTimeout(() => {
+            setIsCompletionAnimating(false)
+        }, 150)
     }
 
     // Create a task update object
@@ -85,12 +140,31 @@ export function TaskDetailPopup({
 
         let dueDateTime = null
         if (dueDate) {
-            const dateObj = new Date(dueDate)
-            if (dueTime) {
-                const [hours, minutes] = dueTime.split(":").map(Number)
-                dateObj.setHours(hours, minutes)
+            // Parse the date string to extract components
+            const [year, month, day] = dueDate.split('-').map(Number);
+            
+            // Create a date object with the extracted components
+            // Month is 0-indexed in JavaScript Date
+            const dateObj = new Date(year, month - 1, day);
+            
+            // Add the time component if a reminder time is set
+            if (hasReminder && reminderTime) {
+                const [hours, minutes] = reminderTime.split(':').map(Number);
+                dateObj.setHours(hours, minutes, 0, 0);
+            } else {
+                // Set to noon to avoid timezone edge cases
+                dateObj.setHours(12, 0, 0, 0);
             }
-            dueDateTime = dateObj.toISOString()
+            
+            // Use preserveDateComponents to ensure consistent date handling
+            dueDateTime = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
+            
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[TaskDetailPopup] createUpdatedTask - Original date: ${dueDate}`);
+                console.log(`[TaskDetailPopup] createUpdatedTask - Parsed components: year=${year}, month=${month}, day=${day}`);
+                console.log(`[TaskDetailPopup] createUpdatedTask - With time: ${hasReminder ? reminderTime : 'noon'}`);
+                console.log(`[TaskDetailPopup] createUpdatedTask - Final due date: ${dueDateTime}`);
+            }
         }
 
         return {
@@ -98,16 +172,10 @@ export function TaskDetailPopup({
             title,
             description,
             due_date: dueDateTime,
-            priority,
-            list_id: listId
-        }
-    }
-    
-    // Auto-save without closing popup
-    const handleAutoSave = () => {
-        const updatedTask = createUpdatedTask()
-        if (updatedTask) {
-            onUpdate(updatedTask)
+            list_id: listId,
+            completed,
+            recurrence_rule: isRecurring ? recurrenceRule : null,
+            subtasks
         }
     }
     
@@ -116,7 +184,6 @@ export function TaskDetailPopup({
         const updatedTask = createUpdatedTask()
         if (updatedTask) {
             onUpdate(updatedTask)
-            // Close the popup after saving
             setIsOpen(false)
         }
     }
@@ -128,101 +195,37 @@ export function TaskDetailPopup({
         setIsOpen(false)
     }
 
-    // Handle task completion toggle
-    const handleComplete = () => {
-        if (!task) return
-        
-        // Toggle completion status
-        const newCompletedStatus = !task.completed
-        
-        // Call the onComplete callback
-        onComplete(task.id, newCompletedStatus)
-        
-        // Auto-save and close the popup
-        const updatedTask: Task = {
-            ...task,
-            title,
-            description,
-            due_date: task.due_date,
-            priority,
-            list_id: listId,
-            completed: newCompletedStatus
-        }
-        
-        onUpdate(updatedTask)
-        setIsOpen(false)
-    }
-
-    // Add subtask
-    const handleAddSubtask = () => {
-        if (!newSubtask.trim()) return
-        setSubtasks([
-            ...subtasks,
-            { id: `subtask-${Date.now()}`, text: newSubtask, completed: false }
-        ])
-        setNewSubtask("")
-    }
-
-    // Toggle subtask completion
-    const toggleSubtaskCompletion = (id: string) => {
-        setSubtasks(
-            subtasks.map(subtask =>
-                subtask.id === id
-                    ? { ...subtask, completed: !subtask.completed }
-                    : subtask
-            )
-        )
-    }
-
-    // Delete subtask
-    const deleteSubtask = (id: string) => {
-        setSubtasks(subtasks.filter(subtask => subtask.id !== id))
-    }
-
-    // Format the due date if it exists
-    const formattedDueDate = dueDate
-        ? format(new Date(dueDate), "MMMM d, yyyy")
-        : null
-
-    // Get the current task list
-    const currentList = taskLists.find(list => list.id === listId)
-
-    // Auto-save on form field changes (without closing popup)
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            if (isOpen && task) {
-                handleAutoSave()
-            }
-        }, 1000)
-
-        return () => clearTimeout(debounceTimer)
-    }, [title, description, dueDate, dueTime, priority, listId, isOpen, task])
-
     // Handle creating a new task
     const handleCreate = () => {
         if (!title.trim() || !onCreate) return
 
         let dueDateTime = null
         if (dueDate) {
-            // Create a date object from the date string
-            const dateObj = new Date(dueDate)
+            // Parse the date string to extract components
+            const [year, month, day] = dueDate.split('-').map(Number);
             
-            // Set the time if provided
-            if (dueTime) {
-                const [hours, minutes] = dueTime.split(":").map(Number)
-                dateObj.setHours(hours, minutes)
+            // Create a date object with the extracted components
+            // Month is 0-indexed in JavaScript Date
+            const dateObj = new Date(year, month - 1, day);
+            
+            // Add the time component if a reminder time is set
+            if (hasReminder && reminderTime) {
+                const [hours, minutes] = reminderTime.split(':').map(Number);
+                dateObj.setHours(hours, minutes, 0, 0);
             } else {
-                // If no time is provided, set to noon to avoid timezone issues
-                dateObj.setHours(12, 0, 0, 0)
+                // Set to noon to avoid timezone edge cases
+                dateObj.setHours(12, 0, 0, 0);
             }
             
-            // Convert to ISO string
-            dueDateTime = dateObj.toISOString()
+            // Use preserveDateComponents to ensure consistent date handling
+            dueDateTime = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
             
-            // Debug: Log the date object and ISO string
-            console.log("Creating task with date:", dueDate)
-            console.log("Date object:", dateObj)
-            console.log("ISO string:", dueDateTime)
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[TaskDetailPopup] handleCreate - Original date: ${dueDate}`);
+                console.log(`[TaskDetailPopup] handleCreate - Parsed components: year=${year}, month=${month}, day=${day}`);
+                console.log(`[TaskDetailPopup] handleCreate - With time: ${hasReminder ? reminderTime : 'noon'}`);
+                console.log(`[TaskDetailPopup] handleCreate - Final due date: ${dueDateTime}`);
+            }
         }
 
         const newTask = {
@@ -230,109 +233,213 @@ export function TaskDetailPopup({
             description,
             due_date: dueDateTime,
             completed: false,
-            priority,
-            list_id: listId
+            priority: 'medium' as const,
+            list_id: listId,
+            subtasks,
+            recurrence_rule: isRecurring ? recurrenceRule : null
         }
-        
-        // Debug: Log the new task
-        console.log("Creating new task:", newTask)
 
         onCreate(newTask)
         setIsOpen(false)
         resetForm()
     }
+    
+    // Handle setting reminder
+    const handleSetReminder = (date: string, time: string) => {
+        console.log(`[TaskDetailPopup] Setting reminder with date: ${date}, time: ${time}`);
+        
+        // Update reminder date and time
+        setReminderDate(date);
+        setReminderTime(time);
+        setHasReminder(true);
+        
+        // Update the due date to match the reminder date
+        setDueDate(date);
+        
+        // Parse the date string to extract components
+        const [year, month, day] = date.split('-').map(Number);
+        const [hours, minutes] = time.split(':').map(Number);
+        
+        if (process.env.NODE_ENV === 'development') {
+            // Log the date information for debugging
+            console.log(`[TaskDetailPopup] Reminder date: ${date}, time: ${time}`);
+            console.log(`[TaskDetailPopup] Parsed components: year=${year}, month=${month}, day=${day}, hours=${hours}, minutes=${minutes}`);
+        }
+        
+        // Close the dialog
+        setIsReminderDialogOpen(false);
+    }
+    
+    // Handle setting recurring
+    const handleSetRecurring = (rule: string) => {
+        setRecurrenceRule(rule)
+        setIsRecurring(true)
+        setIsRecurringDialogOpen(false)
+    }
+    
+    // Handle setting due date
+    const handleSetDueDate = (date: string, time: string) => {
+        console.log(`[TaskDetailPopup] Setting due date with date: ${date}, time: ${time}`);
+        
+        // Update due date and time
+        setDueDate(date);
+        setDueTime(time);
+        
+        // Parse the date string to extract components
+        const [year, month, day] = date.split('-').map(Number);
+        const [hours, minutes] = time.split(':').map(Number);
+        
+        if (process.env.NODE_ENV === 'development') {
+            // Log the date information for debugging
+            console.log(`[TaskDetailPopup] Due date: ${date}, time: ${time}`);
+            console.log(`[TaskDetailPopup] Parsed components: year=${year}, month=${month}, day=${day}, hours=${hours}, minutes=${minutes}`);
+        }
+        
+        // Close the dialog
+        setIsDueDateDialogOpen(false);
+    }
+
+    // Generate unique ID for new subtask
+    const generateSubtaskId = () => {
+        return `subtask-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    }
+
+    // Add new subtask
+    const handleAddSubtask = () => {
+        if (!newSubtask.trim()) return
+        
+        const newSubtaskItem = {
+            id: generateSubtaskId(),
+            text: newSubtask,
+            completed: false
+        }
+        
+        setSubtasks([...subtasks, newSubtaskItem])
+        setNewSubtask("")
+    }
+
+    // Toggle subtask completion
+    const handleToggleSubtask = (id: string) => {
+        const updatedSubtasks = subtasks.map(subtask => 
+            subtask.id === id 
+                ? { ...subtask, completed: !subtask.completed } 
+                : subtask
+        )
+        setSubtasks(updatedSubtasks)
+    }
+
+    // Delete subtask
+    const handleDeleteSubtask = (id: string) => {
+        setSubtasks(subtasks.filter(subtask => subtask.id !== id))
+    }
+
+    // Format reminder date for display
+    const formatReminderDisplay = () => {
+        if (!hasReminder || !reminderDate) {
+            return "Set Reminder";
+        }
+        
+        try {
+            // Parse the date string directly to get the components
+            const [year, month, day] = reminderDate.split('-').map(Number);
+            
+            // Format the date manually to ensure correct display
+            const monthStr = month.toString().padStart(2, '0');
+            const dayStr = day.toString().padStart(2, '0');
+            
+            console.log(`[TaskDetailPopup] Formatting reminder: ${reminderDate} as ${monthStr}/${dayStr} at ${reminderTime}`);
+            
+            return `${monthStr}/${dayStr} at ${reminderTime}`;
+        } catch (error) {
+            console.error("Error formatting reminder date:", error);
+            return "Set Reminder";
+        }
+    }
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh] bg-white text-black">
-                <DialogHeader>
-                    <DialogTitle className="flex-1">
-                        {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}
-                    </DialogTitle>
-                </DialogHeader>
+        <>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh] bg-white text-black">
+                    <DialogHeader>
+                        <DialogTitle className="flex-1">
+                            {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}
+                        </DialogTitle>
+                    </DialogHeader>
 
-                {mode === 'edit' && task ? (
-                    <>
-                        <DialogHeader>
-                            <div className="flex items-center gap-2">
-                                <div
-                                    className={cn(
-                                        "flex-shrink-0 w-6 h-6 rounded-full border cursor-pointer flex items-center justify-center",
-                                        task.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-500"
-                                    )}
-                                    onClick={handleComplete}
+                    {mode === 'edit' && task ? (
+                        <div className="space-y-6 mt-2">
+                            {/* Title with completion checkbox */}
+                            <div className="flex items-center gap-3">
+                                {/* Click to complete circle */}
+                                <button
+                                    type="button"
+                                    aria-checked={completed}
+                                    role="checkbox"
+                                    className="focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary relative z-10"
+                                    onClick={handleCompleteToggle}
+                                    aria-label={completed ? `Mark task as incomplete` : `Mark task as complete`}
                                 >
-                                    {task.completed && <Check className="h-4 w-4 text-white" />}
-                                </div>
-                                <DialogTitle className="flex-1">
+                                    <div
+                                        className={cn(
+                                            "w-5 h-5 rounded-full border flex items-center justify-center transition-all duration-200",
+                                            completed 
+                                                ? "bg-green-500 border-green-500" 
+                                                : "border-gray-300 hover:border-gray-500",
+                                            isCompletionAnimating && "scale-110"
+                                        )}
+                                    >
+                                        {completed && (
+                                            <Check className={cn(
+                                                "h-3 w-3 text-white transition-opacity duration-100",
+                                                isCompletionAnimating ? "opacity-50" : "opacity-100"
+                                            )} />
+                                        )}
+                                    </div>
+                                    
+                                    {/* Ripple effect */}
+                                    {isCompletionAnimating && (
+                                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-green-500/30 rounded-full animate-ping" />
+                                    )}
+                                </button>
+                                
                                 <Input
-                                    className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground"
+                                    id="edit-title"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Task title"
+                                    className={cn(
+                                        "text-foreground flex-1",
+                                        completed && "line-through text-gray-400"
+                                    )}
                                 />
-                                </DialogTitle>
-                            </div>
-                        </DialogHeader>
-
-                        <div className="space-y-6 mt-2">
-                            {/* List and Priority Selectors */}
-                            <div className="flex gap-3">
-                                <div className="flex-1">
-                                    <label className="text-sm font-medium mb-1 block">List</label>
-                                    <select
-                                        value={listId || ''}
-                                        onChange={(e) => setListId(e.target.value || null)}
-                                        className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
-                                    >
-                                        <option value="">No List</option>
-                                        {taskLists.map((list) => (
-                                            <option key={list.id} value={list.id}>
-                                                {list.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="flex-1">
-                                    <label className="text-sm font-medium mb-1 block">Priority</label>
-                                    <select
-                                        value={priority}
-                                        onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                                        className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
-                                    >
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
                             </div>
 
-                            {/* Due Date */}
+                            {/* List selection */}
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-medium">Due Date</label>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                        type="date"
-                                        value={dueDate}
-                                        onChange={(e) => setDueDate(e.target.value)}
-                                        className="text-sm text-foreground"
-                                    />
-                                    <Input
-                                        type="time"
-                                        value={dueTime}
-                                        onChange={(e) => setDueTime(e.target.value)}
-                                        className="text-sm text-foreground"
-                                    />
-                                </div>
+                                <label htmlFor="edit-list" className="text-sm font-medium">
+                                    List
+                                </label>
+                                <select
+                                    id="edit-list"
+                                    value={listId || ""}
+                                    onChange={(e) => setListId(e.target.value || null)}
+                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-black ring-offset-background"
+                                >
+                                    <option value="">Select a list</option>
+                                    {taskLists.map(list => (
+                                        <option key={list.id} value={list.id}>
+                                            {list.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            {/* Notes Section */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Notes</label>
+                                <label htmlFor="edit-description" className="text-sm font-medium">
+                                    Notes
+                                </label>
                                 <Textarea
+                                    id="edit-description"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Add notes here..."
@@ -340,77 +447,136 @@ export function TaskDetailPopup({
                                 />
                             </div>
 
-                            {/* Subtasks Section */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-medium">Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})</label>
-                                </div>
-
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    {subtasks.map((subtask) => (
+                                    <label htmlFor="edit-duedate" className="text-sm font-medium">
+                                        Due Date
+                                    </label>
+                                    <Button
+                                        id="edit-duedate"
+                                        variant="outline"
+                                        className={cn(
+                                            "w-full flex items-center justify-center gap-2",
+                                            dueDate && "bg-primary/10 border-primary text-primary"
+                                        )}
+                                        onClick={() => setIsDueDateDialogOpen(true)}
+                                    >
+                                        <span>
+                                            {dueDate ? format(parseISO(dueDate), "MM/dd/yyyy") : "Set Due Date"}
+                                        </span>
+                                    </Button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label htmlFor="edit-reminder" className="text-sm font-medium">
+                                        Reminder
+                                    </label>
+                                    <Button
+                                        id="edit-reminder"
+                                        variant="outline"
+                                        className={cn(
+                                            "w-full flex items-center justify-center gap-2",
+                                            hasReminder && "bg-primary/10 border-primary text-primary"
+                                        )}
+                                        onClick={() => {
+                                            // Pre-set the date in the reminder dialog to the current due date if it exists
+                                            if (dueDate) {
+                                                setReminderDate(dueDate);
+                                            }
+                                            setIsReminderDialogOpen(true);
+                                        }}
+                                    >
+                                        <Bell className="h-4 w-4" />
+                                        <span>
+                                            {hasReminder ? formatReminderDisplay() : "Set Reminder"}
+                                        </span>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Checkbox for recurring tasks */}
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="edit-recurring"
+                                    checked={isRecurring}
+                                    onChange={(e) => {
+                                        setIsRecurring(e.target.checked);
+                                        if (e.target.checked) {
+                                            setIsRecurringDialogOpen(true);
+                                        } else {
+                                            setRecurrenceRule(null);
+                                        }
+                                    }}
+                                    className="mr-2 h-4 w-4"
+                                />
+                                <label htmlFor="edit-recurring" className="text-sm">
+                                    Recurring {recurrenceRule && recurrenceRule.startsWith("FREQ=") && `(${recurrenceRule.split(";")[0].replace("FREQ=", "")})`}
+                                </label>
+                            </div>
+                            
+                            {/* Subtasks section */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                    Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})
+                                </label>
+                                <div className="space-y-2">
+                                    {subtasks.map(subtask => (
                                         <div key={subtask.id} className="flex items-center gap-2">
-                                            <div
-                                                className={cn(
-                                                    "flex-shrink-0 w-5 h-5 rounded-full border cursor-pointer flex items-center justify-center",
-                                                    subtask.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-500"
-                                                )}
-                                                onClick={() => toggleSubtaskCompletion(subtask.id)}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleSubtask(subtask.id)}
+                                                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                             >
-                                                {subtask.completed && <Check className="h-3 w-3 text-white" />}
-                                            </div>
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded-full border flex items-center justify-center",
+                                                    subtask.completed ? "bg-green-500 border-green-500" : "border-gray-300"
+                                                )}>
+                                                    {subtask.completed && <Check className="h-2 w-2 text-white" />}
+                                                </div>
+                                            </button>
                                             <span className={cn(
                                                 "flex-1 text-sm",
-                                                subtask.completed && "line-through text-gray-500"
+                                                subtask.completed && "line-through text-gray-400"
                                             )}>
                                                 {subtask.text}
                                             </span>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-6 w-6 text-red-500 hover:text-red-700"
-                                                onClick={() => deleteSubtask(subtask.id)}
+                                                className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => handleDeleteSubtask(subtask.id)}
                                             >
                                                 <Trash className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     ))}
-
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            placeholder="Add a subtask..."
-                                            value={newSubtask}
-                                            onChange={(e) => setNewSubtask(e.target.value)}
-                                            className="text-sm text-foreground"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault()
-                                                    handleAddSubtask()
-                                                }
-                                            }}
-                                        />
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleAddSubtask}
-                                        >
-                                            <Plus className="h-3 w-3 mr-1" />
-                                            Add
-                                        </Button>
-                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newSubtask}
+                                        onChange={(e) => setNewSubtask(e.target.value)}
+                                        placeholder="Add a subtask..."
+                                        className="text-sm text-black"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newSubtask.trim()) {
+                                                handleAddSubtask();
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={handleAddSubtask}
+                                        disabled={!newSubtask.trim()}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Add
+                                    </Button>
                                 </div>
                             </div>
 
-                            {/* Attachments Section */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Attachments</label>
-                                <div className="border border-dashed rounded-md p-4 text-center">
-                                    <p className="text-xs text-gray-500">
-                                        Click to add / drop your files here
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Footer with Delete and Save Buttons */}
                             <div className="flex justify-between gap-2 border-t pt-4">
                                 <Button
                                     variant="ghost"
@@ -428,34 +594,35 @@ export function TaskDetailPopup({
                                 </Button>
                             </div>
                         </div>
-                    </>
-                ) : (
-                    <div className="space-y-6 mt-2">
-                        <div className="space-y-2">
-                            <label htmlFor="title" className="text-sm font-medium">
-                                Title
-                            </label>
-                            <Input
-                                id="title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Task title"
-                                className="text-foreground"
-                                required
-                            />
-                        </div>
+                    ) : (
+                        <div className="space-y-6 mt-2">
+                            <div className="space-y-2">
+                                <label htmlFor="create-title" className="text-sm font-medium">
+                                    Title
+                                </label>
+                                <Input
+                                    id="create-title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Task title"
+                                    className="text-foreground"
+                                    required
+                                />
+                            </div>
 
-                        {/* List and Priority Selectors */}
-                        <div className="flex gap-3">
-                            <div className="flex-1">
-                                <label className="text-sm font-medium mb-1 block">List</label>
+                            {/* List selection */}
+                            <div className="space-y-2">
+                                <label htmlFor="create-list" className="text-sm font-medium">
+                                    List
+                                </label>
                                 <select
-                                    value={listId || ''}
+                                    id="create-list"
+                                    value={listId || ""}
                                     onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
+                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-black ring-offset-background"
                                 >
-                                    <option value="">No List</option>
-                                    {taskLists.map((list) => (
+                                    <option value="">Select a list</option>
+                                    {taskLists.map(list => (
                                         <option key={list.id} value={list.id}>
                                             {list.name}
                                         </option>
@@ -463,142 +630,190 @@ export function TaskDetailPopup({
                                 </select>
                             </div>
 
-                            <div className="flex-1">
-                                <label className="text-sm font-medium mb-1 block">Priority</label>
-                                <select
-                                    value={priority}
-                                    onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-                                    className="w-full px-3 py-2 border rounded-md text-sm text-foreground"
-                                >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Due Date */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Due Date</label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Input
-                                    type="date"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className="text-sm text-foreground"
-                                />
-                                <Input
-                                    type="time"
-                                    value={dueTime}
-                                    onChange={(e) => setDueTime(e.target.value)}
-                                    className="text-sm text-foreground"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Notes Section */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Notes</label>
-                            <Textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Add notes here..."
-                                className="min-h-24 text-sm text-foreground"
-                            />
-                        </div>
-
-                        {/* Subtasks Section */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})</label>
-                            </div>
-
                             <div className="space-y-2">
-                                {subtasks.map((subtask) => (
-                                    <div key={subtask.id} className="flex items-center gap-2">
-                                        <div
-                                            className={cn(
-                                                "flex-shrink-0 w-5 h-5 rounded-full border cursor-pointer flex items-center justify-center",
-                                                subtask.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-gray-500"
-                                            )}
-                                            onClick={() => toggleSubtaskCompletion(subtask.id)}
-                                        >
-                                            {subtask.completed && <Check className="h-3 w-3 text-white" />}
-                                        </div>
-                                        <span className={cn(
-                                            "flex-1 text-sm",
-                                            subtask.completed && "line-through text-gray-500"
-                                        )}>
-                                            {subtask.text}
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-red-500 hover:text-red-700"
-                                            onClick={() => deleteSubtask(subtask.id)}
-                                        >
-                                            <Trash className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                ))}
+                                <label htmlFor="create-description" className="text-sm font-medium">
+                                    Notes
+                                </label>
+                                <Textarea
+                                    id="create-description"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Add notes here..."
+                                    className="min-h-24 text-sm text-foreground"
+                                />
+                            </div>
 
-                                <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label htmlFor="create-duedate" className="text-sm font-medium">
+                                        Due Date
+                                    </label>
+                                    <Button
+                                        id="create-duedate"
+                                        variant="outline"
+                                        className={cn(
+                                            "w-full flex items-center justify-center gap-2",
+                                            dueDate && "bg-primary/10 border-primary text-primary"
+                                        )}
+                                        onClick={() => setIsDueDateDialogOpen(true)}
+                                    >
+                                        <span>
+                                            {dueDate ? format(parseISO(dueDate), "MM/dd/yyyy") : "Set Due Date"}
+                                        </span>
+                                    </Button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <label htmlFor="create-reminder" className="text-sm font-medium">
+                                        Reminder
+                                    </label>
+                                    <Button
+                                        id="create-reminder"
+                                        variant="outline"
+                                        className={cn(
+                                            "w-full flex items-center justify-center gap-2",
+                                            hasReminder && "bg-primary/10 border-primary text-primary"
+                                        )}
+                                        onClick={() => {
+                                            // Pre-set the date in the reminder dialog to the current due date if it exists
+                                            if (dueDate) {
+                                                setReminderDate(dueDate);
+                                            }
+                                            setIsReminderDialogOpen(true);
+                                        }}
+                                    >
+                                        <Bell className="h-4 w-4" />
+                                        <span>
+                                            {hasReminder ? formatReminderDisplay() : "Set Reminder"}
+                                        </span>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Checkbox for recurring tasks */}
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="create-recurring"
+                                    checked={isRecurring}
+                                    onChange={(e) => {
+                                        setIsRecurring(e.target.checked);
+                                        if (e.target.checked) {
+                                            setIsRecurringDialogOpen(true);
+                                        } else {
+                                            setRecurrenceRule(null);
+                                        }
+                                    }}
+                                    className="mr-2 h-4 w-4"
+                                />
+                                <label htmlFor="create-recurring" className="text-sm">
+                                    Recurring {recurrenceRule && recurrenceRule.startsWith("FREQ=") && `(${recurrenceRule.split(";")[0].replace("FREQ=", "")})`}
+                                </label>
+                            </div>
+                            
+                            {/* Subtasks section */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                    Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})
+                                </label>
+                                <div className="space-y-2">
+                                    {subtasks.map(subtask => (
+                                        <div key={subtask.id} className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleSubtask(subtask.id)}
+                                                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                            >
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded-full border flex items-center justify-center",
+                                                    subtask.completed ? "bg-green-500 border-green-500" : "border-gray-300"
+                                                )}>
+                                                    {subtask.completed && <Check className="h-2 w-2 text-white" />}
+                                                </div>
+                                            </button>
+                                            <span className={cn(
+                                                "flex-1 text-sm",
+                                                subtask.completed && "line-through text-gray-400"
+                                            )}>
+                                                {subtask.text}
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => handleDeleteSubtask(subtask.id)}
+                                            >
+                                                <Trash className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
                                     <Input
-                                        placeholder="Add a subtask..."
                                         value={newSubtask}
                                         onChange={(e) => setNewSubtask(e.target.value)}
-                                        className="text-sm text-foreground"
+                                        placeholder="Add a subtask..."
+                                        className="text-sm text-black"
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault()
-                                                handleAddSubtask()
+                                            if (e.key === 'Enter' && newSubtask.trim()) {
+                                                handleAddSubtask();
+                                                e.preventDefault();
                                             }
                                         }}
                                     />
                                     <Button
-                                        variant="outline"
+                                        type="button"
                                         size="sm"
                                         onClick={handleAddSubtask}
+                                        disabled={!newSubtask.trim()}
                                     >
-                                        <Plus className="h-3 w-3 mr-1" />
+                                        <Plus className="h-4 w-4" />
                                         Add
                                     </Button>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Attachments Section */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Attachments</label>
-                            <div className="border border-dashed rounded-md p-4 text-center">
-                                <p className="text-xs text-gray-500">
-                                    Click to add / drop your files here
-                                </p>
+                            <div className="flex justify-end gap-2 border-t pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="default"
+                                    onClick={handleCreate}
+                                >
+                                    Create
+                                </Button>
                             </div>
                         </div>
-
-                        <div className="flex justify-end gap-2 border-t pt-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsOpen(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                onClick={handleCreate}
-                            >
-                                Add Task
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </DialogContent>
-        </Dialog>
+                    )}
+                </DialogContent>
+            </Dialog>
+            
+            {/* Reminder Dialog */}
+            <ReminderDialog
+                isOpen={isReminderDialogOpen}
+                onClose={() => setIsReminderDialogOpen(false)}
+                onSetReminder={handleSetReminder}
+            />
+            
+            {/* Recurring Dialog */}
+            <RecurringDialog
+                isOpen={isRecurringDialogOpen}
+                onClose={() => setIsRecurringDialogOpen(false)}
+                onSetRecurring={handleSetRecurring}
+            />
+            
+            {/* Due Date Dialog */}
+            <DueDateDialog
+                isOpen={isDueDateDialogOpen}
+                onClose={() => setIsDueDateDialogOpen(false)}
+                onSetDueDate={handleSetDueDate}
+            />
+        </>
     )
 }
-
-export default TaskDetailPopup

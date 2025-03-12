@@ -149,8 +149,8 @@ export function DroppableTaskSection({
                 <>
                     {tasks.length === 0 && (
                         <div className={cn(
-                            "ml-5 py-4 border-2 border-dashed rounded-md flex items-center justify-center",
-                            isActive ? "border-primary/70 bg-primary/5" : "border-gray-200"
+                            "ml-5 py-4 flex items-center justify-center",
+                            isActive ? "bg-primary/5" : ""
                         )}>
                             <p className={cn(
                                 "text-sm",
