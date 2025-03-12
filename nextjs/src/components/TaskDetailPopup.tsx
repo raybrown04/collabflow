@@ -359,7 +359,7 @@ export function TaskDetailPopup({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh] bg-white text-black">
+                <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle className="flex-1">
                             {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}
@@ -423,7 +423,7 @@ export function TaskDetailPopup({
                                     id="edit-list"
                                     value={listId || ""}
                                     onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-black ring-offset-background"
+                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background"
                                 >
                                     <option value="">Select a list</option>
                                     {taskLists.map(list => (
@@ -557,7 +557,7 @@ export function TaskDetailPopup({
                                         value={newSubtask}
                                         onChange={(e) => setNewSubtask(e.target.value)}
                                         placeholder="Add a subtask..."
-                                        className="text-sm text-black"
+                                    className="text-sm text-foreground"
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && newSubtask.trim()) {
                                                 handleAddSubtask();
@@ -619,7 +619,7 @@ export function TaskDetailPopup({
                                     id="create-list"
                                     value={listId || ""}
                                     onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-black ring-offset-background"
+                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background"
                                 >
                                     <option value="">Select a list</option>
                                     {taskLists.map(list => (
@@ -753,7 +753,7 @@ export function TaskDetailPopup({
                                         value={newSubtask}
                                         onChange={(e) => setNewSubtask(e.target.value)}
                                         placeholder="Add a subtask..."
-                                        className="text-sm text-black"
+                                        className="text-sm text-foreground"
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && newSubtask.trim()) {
                                                 handleAddSubtask();

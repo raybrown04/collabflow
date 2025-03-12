@@ -1,185 +1,99 @@
 # Development Guidelines
 
-This document provides detailed explanations of the development guidelines established in the .clinerules file.
+{/* Updated to reflect current project state (sidebar, calendar, events list completed) - 3/4/2025 */}
+
+This document provides high-level development guidelines for the CollabFlow project, complementing the detailed technical guides.
 
 ## Table of Contents
-- [General Guidelines](#general-guidelines)
-- [Framework Best Practices](#framework-best-practices)
-- [Quality Attributes](#quality-attributes)
-- [Testing & Deployment](#testing--deployment)
-- [Documentation & Diagrams](#documentation--diagrams)
-- [Tooling & Automation](#tooling--automation)
+- [Code Organization](#code-organization)
+- [Development Workflow](#development-workflow)
+- [Quality Assurance](#quality-assurance)
+- [Collaboration Practices](#collaboration-practices)
 
 ---
 
-## General Guidelines
+## Code Organization
 
-- **Clean Coding Principles**
-  - Write modular, DRY, and well-documented code
-  - Break down into smaller components
-  - Create a hooks directory for all custom hooks
-  - Keep React components under 300 lines
-  - Use a component approach for all designs
+### Project Structure
+- Follow Next.js recommended project structure
+- Group related components in feature-specific directories
+- Keep utility functions in dedicated lib directories
+- Store hooks in a centralized hooks directory
 
-- **Git Workflow**
-  - Use clear commit messages
-  - Implement systematic branching
-  - Follow multi-environment strategies (local → staging → production)
+### Component Design
+- Create small, focused components (max 300 lines)
+- Use composition over inheritance
+- Follow single responsibility principle
+- Document component props and usage
 
-- **Documentation**
-  - Add a comment at the top of new files with the changes made
-  - Update comments when making changes to existing files
-  - Document component props and functions
-
----
-
-## Framework Best Practices
-
-### Supabase
-
-- **Authentication**
-  - Utilize Supabase Auth for secure user authentication
-  - Support email/password, OAuth, and MFA
-
-- **Data Security**
-  - Implement Row Level Security (RLS) on all tables
-  - Restrict data access based on user roles
-
-- **Schema Management**
-  - Use migration tools for schema changes
-  - Ensure consistency across environments
-
-- **Performance**
-  - Create proper indexes for frequently queried columns
-  - Write efficient queries
-  - Implement caching strategies where applicable
-
-### Next.js
-
-- **Routing & Rendering**
-  - Use the Next.js App Router for all new pages
-  - Implement server-side rendering (SSR) for critical pages
-  - Follow Next.js routing and colocation guidelines
-
-- **Performance Optimization**
-  - Leverage dynamic imports and code splitting
-  - Use next/dynamic for lazy-loaded components
-  - Optimize images with the Next.js Image component
-
-- **Authentication & Middleware**
-  - Utilize middleware for app-wide authentication checks
-  - Implement proper session management
+### State Management
+- Use React Context for global state
+- Prefer local state when possible
+- Avoid prop drilling with proper component structure
+- Use React Query for server state management
 
 ---
 
-## Quality Attributes
+## Development Workflow
 
-### Security & Compliance
+### Git Practices
+- Use feature branches for new development
+- Write clear, descriptive commit messages
+- Rebase instead of merge when updating branches
+- Squash commits before merging to main
 
-- **Access Control**
-  - Enforce the principle of least privilege for user roles
-  - Restrict database access appropriately
+### Code Reviews
+- Review all pull requests thoroughly
+- Provide constructive feedback
+- Verify functionality and code quality
+- Ensure tests are included for new features
 
-- **Communication Security**
-  - Use HTTPS for all communications
-  - Configure CORS properly
-
-- **Session Management**
-  - Implement HTTP-only cookies with secure and SameSite attributes
-  - Regularly audit dependencies, credentials, and secrets
-
-### Performance & User Experience
-
-- **Rendering Strategy**
-  - Use SSR for fast initial loads
-  - Implement static generation (SSG) or incremental static regeneration (ISR) when appropriate
-
-- **Asset Optimization**
-  - Implement lazy loading for components and images
-  - Use code splitting to reduce bundle sizes
-
-- **User Feedback**
-  - Provide clear loading spinners
-  - Implement toast notifications
-  - Add error boundaries for graceful error handling
+### Environment Management
+- Maintain separate environment configurations
+- Use .env files for sensitive configuration
+- Document environment setup process
+- Keep development and production environments in sync
 
 ---
 
-## Testing & Deployment
+## Quality Assurance
 
-### Testing Approach
+### Testing Strategy
+- Write unit tests for core functionality
+- Create integration tests for key workflows
+- Implement end-to-end tests for critical paths
+- Maintain test coverage above 80%
 
-- **Test Types**
-  - Write unit tests for individual functions
-  - Create integration tests for API endpoints
-  - Implement E2E tests for critical user flows
+### Code Quality
+- Use ESLint for static code analysis
+- Run Prettier for consistent formatting
+- Perform regular code audits
+- Refactor code to improve maintainability
 
-- **Test Design**
-  - Keep tests simple with clear purpose
-  - Minimize test setup complexity
-
-- **Debugging Workflow**
-  - For persistent test failures:
-    1. Check memory graph for similar errors using `memory/retrieve`
-    2. Use `sequentialthinking/analyze` to break down the problem
-    3. Search for solutions with `perplexity/search`
-    4. Store the resolution in memory graph for future reference
-
-### Continuous Integration
-
-- **Monitoring**
-  - Set up continuous monitoring with logging and error tracking
-  - Perform regular performance audits
-
-- **Deployment**
-  - Use CI/CD pipelines for automated testing and deployments
-  - Maintain consistent environment variable management
-  - Document deployment processes and rollback strategies
+### Performance Monitoring
+- Profile application performance regularly
+- Optimize critical rendering paths
+- Implement lazy loading for non-critical components
+- Monitor bundle size and optimize dependencies
 
 ---
 
-## Documentation & Diagrams
+## Collaboration Practices
 
-- **Mermaid Diagrams**
-  - Use Mermaid syntax for system workflows and architecture diagrams
-  - Store complex diagrams in the memory graph for easy retrieval
-  - Keep diagrams simple and focused on key concepts
+### Documentation
+- Maintain up-to-date project documentation
+- Document architectural decisions
+- Keep README files current
+- Use comments judiciously in code
 
-- **Code Documentation**
-  - Write clear inline comments for complex logic
-  - Add block comments to explain the purpose of functions/modules
-  - Document props and return values for all components and functions
+### Communication
+- Use clear, concise language in code reviews
+- Document decisions in pull requests
+- Maintain a shared knowledge base
+- Conduct regular team syncs
 
-- **Maintenance**
-  - Keep documentation up-to-date with code changes
-  - Periodically review and refine documentation
-
----
-
-## Tooling & Automation
-
-### MCP Tool Integration
-
-- **Memory Graph Usage**
-  - Store common error patterns and solutions
-  - Save optimized code snippets and design patterns
-  - Track successful test configurations
-
-- **Specialized Tools**
-  - Use filesystem tools for configuration and log management
-  - Use perplexity for research and documentation
-  - Use sequentialthinking for structured debugging
-  - Use supabase tools for database operations
-  - Use browser-tools for testing and debugging
-
-### UI Component Generation
-
-- **21st.dev Integration**
-  - Use 21st-dev-magic-mcp for rapid UI component development
-  - Trigger component generation with "/ui", "/21", or "/21st" commands
-  - Follow Tailwind and Radix UI patterns for consistency
-
-- **Brand Integration**
-  - Use logo_search for brand logo integration
-  - Customize generated components to match the project's design system
-  - Store frequently used component patterns in memory graph
+### Continuous Improvement
+- Conduct retrospectives after major milestones
+- Identify areas for process improvement
+- Share knowledge through code walkthroughs
+- Stay updated with industry best practices

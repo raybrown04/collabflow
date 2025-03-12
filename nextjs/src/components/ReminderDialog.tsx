@@ -14,13 +14,13 @@ interface CalendarDay {
     isSelected: boolean;
 }
 
-interface DueDateDialogProps {
+interface ReminderDialogProps {
     isOpen: boolean
     onClose: () => void
-    onSetDueDate: (date: string, time: string) => void
+    onSetReminder: (date: string, time: string) => void
 }
 
-export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogProps) {
+export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialogProps) {
     // Current visible month in the calendar
     const [viewDate, setViewDate] = useState(() => {
         const now = new Date();
@@ -28,24 +28,24 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
         return now;
     });
     
-    // Selected date for the due date (store as string to avoid date conversion issues)
+    // Selected date for the reminder (store as string to avoid date conversion issues)
     const [selectedDateStr, setSelectedDateStr] = useState(() => {
         const now = new Date();
         // Don't set hours to noon - just use the date as is to avoid timezone issues
         return format(now, "yyyy-MM-dd");
     });
     
-    // Time for the due date
-    const [dueTime, setDueTime] = useState<string>("09:00");
-    const [isDueDateRecurring, setIsDueDateRecurring] = useState(false);
+    // Time for the reminder
+    const [reminderTime, setReminderTime] = useState<string>("09:00");
+    const [isReminderRecurring, setIsReminderRecurring] = useState(false);
     
     // Generate calendar grid for the current view month
     const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
     
     // Debug logs for troubleshooting
     useEffect(() => {
-        console.log(`DueDateDialog: Selected date updated: ${selectedDateStr}`);
-        console.log(`DueDateDialog: Display date: ${format(parseISO(selectedDateStr), "MM.dd.yyyy")}`);
+        console.log(`ReminderDialog: Selected date updated: ${selectedDateStr}`);
+        console.log(`ReminderDialog: Display date: ${format(parseISO(selectedDateStr), "MM.dd.yyyy")}`);
     }, [selectedDateStr]);
     
     // Recalculate calendar when view month changes or selected date changes
@@ -137,8 +137,8 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
         const dateStr = `${year}-${month.toString().padStart(2, '0')}-${dayOfMonth.toString().padStart(2, '0')}`;
         
         if (process.env.NODE_ENV === 'development') {
-            console.log(`DueDateDialog: Selected date: ${dateStr} (day ${day.dayOfMonth})`);
-            console.log(`DueDateDialog: Date components: Year=${year}, Month=${month}, Day=${dayOfMonth}`);
+            console.log(`ReminderDialog: Selected date: ${dateStr} (day ${day.dayOfMonth})`);
+            console.log(`ReminderDialog: Date components: Year=${year}, Month=${month}, Day=${dayOfMonth}`);
         }
         
         // Update the selected date string
@@ -150,8 +150,8 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
         }
     };
     
-    // Handle due date quick options
-    const handleDueDateQuickOption = (option: "later_today" | "tomorrow" | "next_week" | "someday") => {
+    // Handle reminder quick options
+    const handleReminderQuickOption = (option: "later_today" | "tomorrow" | "next_week" | "someday") => {
         const now = new Date();
         
         switch (option) {
@@ -160,7 +160,7 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                 const laterToday = new Date();
                 laterToday.setHours(laterToday.getHours() + 3);
                 setSelectedDateStr(format(now, "yyyy-MM-dd"));
-                setDueTime(format(laterToday, "HH:mm"));
+                setReminderTime(format(laterToday, "HH:mm"));
                 break;
                 
             case "tomorrow":
@@ -168,7 +168,7 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                 const tomorrow = new Date(now);
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 setSelectedDateStr(format(tomorrow, "yyyy-MM-dd"));
-                setDueTime("09:00");
+                setReminderTime("09:00");
                 break;
                 
             case "next_week":
@@ -176,7 +176,7 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                 const nextWeek = new Date(now);
                 nextWeek.setDate(nextWeek.getDate() + 7);
                 setSelectedDateStr(format(nextWeek, "yyyy-MM-dd"));
-                setDueTime("09:00");
+                setReminderTime("09:00");
                 break;
                 
             case "someday":
@@ -184,15 +184,15 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                 const someday = new Date(now);
                 someday.setDate(someday.getDate() + 14);
                 setSelectedDateStr(format(someday, "yyyy-MM-dd"));
-                setDueTime("09:00");
+                setReminderTime("09:00");
                 break;
         }
     };
     
-    // Handle setting due date
-    const handleSetDueDate = () => {
+    // Handle setting reminder
+    const handleSetReminder = () => {
         // Pass the selected date string directly without any conversion
-        onSetDueDate(selectedDateStr, dueTime);
+        onSetReminder(selectedDateStr, reminderTime);
         onClose();
     };
     
@@ -200,7 +200,7 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
                 <DialogHeader>
-                    <DialogTitle>Due Date</DialogTitle>
+                    <DialogTitle>Reminder</DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-6 mt-2">
@@ -220,8 +220,8 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                             <label className="text-sm font-medium mb-1 block">TIME</label>
                             <Input
                                 type="time"
-                                value={dueTime}
-                                onChange={(e) => setDueTime(e.target.value)}
+                                value={reminderTime}
+                                onChange={(e) => setReminderTime(e.target.value)}
                                 className="text-sm text-foreground"
                             />
                         </div>
@@ -289,28 +289,28 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                         <Button
                             variant="outline"
                             className="justify-start"
-                            onClick={() => handleDueDateQuickOption("later_today")}
+                            onClick={() => handleReminderQuickOption("later_today")}
                         >
                             Later today
                         </Button>
                         <Button
                             variant="outline"
                             className="justify-start"
-                            onClick={() => handleDueDateQuickOption("tomorrow")}
+                            onClick={() => handleReminderQuickOption("tomorrow")}
                         >
                             Tomorrow
                         </Button>
                         <Button
                             variant="outline"
                             className="justify-start"
-                            onClick={() => handleDueDateQuickOption("next_week")}
+                            onClick={() => handleReminderQuickOption("next_week")}
                         >
                             Next week
                         </Button>
                         <Button
                             variant="outline"
                             className="justify-start"
-                            onClick={() => handleDueDateQuickOption("someday")}
+                            onClick={() => handleReminderQuickOption("someday")}
                         >
                             Someday
                         </Button>
@@ -319,12 +319,12 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                         <div className="flex items-center mt-2">
                             <input
                                 type="checkbox"
-                                id="due-date-recurring"
-                                checked={isDueDateRecurring}
-                                onChange={(e) => setIsDueDateRecurring(e.target.checked)}
+                                id="reminder-recurring"
+                                checked={isReminderRecurring}
+                                onChange={(e) => setIsReminderRecurring(e.target.checked)}
                                 className="mr-2 h-4 w-4"
                             />
-                            <label htmlFor="due-date-recurring" className="text-sm">
+                            <label htmlFor="reminder-recurring" className="text-sm">
                                 Recurring
                             </label>
                         </div>
@@ -340,8 +340,8 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
                         </Button>
                         <Button
                             variant="default"
-                            onClick={handleSetDueDate}
-                            data-testid="set-due-date-button"
+                            onClick={handleSetReminder}
+                            data-testid="set-reminder-button"
                         >
                             Set
                         </Button>
@@ -352,4 +352,4 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
     )
 }
 
-export default DueDateDialog
+export default ReminderDialog

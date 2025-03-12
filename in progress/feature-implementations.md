@@ -1,5 +1,7 @@
 # Feature Implementations
 
+{/* Updated to reflect current project state (sidebar, calendar, events list completed) - 3/4/2025 */}
+
 This document provides an overview of key feature implementations in the CollabFlow project.
 
 ## Table of Contents
@@ -41,7 +43,6 @@ graph TD
 #### EventForm
 - Provides form for creating new events
 - Includes fields for title, description, type, and time
-- Supports development mode with mock data
 - Integrates with Supabase for data persistence
 
 ### Enhanced Features
@@ -51,12 +52,17 @@ graph TD
 - Year view popup for quick month selection
 - Calendar toggle button for showing/hiding the calendar
 
+#### Any.do-Style Task Management
+- Implemented Any.do-style task management with collapsible sections (Today, Tomorrow, etc.)
+- Replaced the clock icon and "Today"/"Tomorrow" labels with project/list-specific tags
+- Removed the "View" button and repositioned the "Add Task" button in the task list header
+
 #### Improved Scrolling
 - Single scrollbar for the events list
 - Fixed header and calendar for better user experience
 - Thin scrollbar styling for a cleaner interface
 
-#### Event Editing and Management
+#### Event Management
 - Dialog for viewing event details
 - Edit mode for updating event information
 - Delete functionality with confirmation
@@ -64,7 +70,6 @@ graph TD
 
 ### Database Integration
 
-#### Schema
 ```sql
 create table calendar_events (
   id uuid default gen_random_uuid() primary key,
@@ -114,37 +119,9 @@ The drag-and-drop functionality for calendar events has been successfully implem
 - Implements optimistic updates for a smoother user experience
 - Provides error handling and success notifications
 
-### Technical Implementation
-
-The implementation uses React DnD instead of native HTML5 drag-and-drop for better TypeScript support, more consistent cross-browser behavior, and a more React-friendly API.
-
-```jsx
-// Example: Setting up the drag source
-const [{ isDragging }, dragRef] = useDrag({
-  type: ITEM_TYPE,
-  item: () => ({
-    id: event.id,
-    originalDate: event.date,
-    event: event
-  }),
-  canDrag: () => isOwnedByCurrentUser
-})
-
-// Example: Setting up the drop target
-const [{ isOver, canDrop }, dropRef] = useDrop({
-  accept: ITEM_TYPE,
-  drop: (item) => {
-    onEventDrop(item.event, day)
-    return { moved: true }
-  }
-})
-```
-
 ### Visual Feedback
-
 - Dragged items show reduced opacity
 - Drop targets highlight when an item is dragged over them
-- Text indicators show when an item can be dropped
 - Success/error toast notifications appear after drop operations
 
 ---
@@ -177,6 +154,30 @@ graph TD
     I --> N[Project Info]
 ```
 
+### Database Schema
+
+```sql
+create table ai_messages (
+  id uuid default gen_random_uuid() primary key,
+  content text not null,
+  is_user boolean not null,
+  assistant_type text not null default 'personal',
+  created_at timestamptz default now(),
+  user_id uuid references auth.users not null
+);
+
+-- RLS Policies
+alter table ai_messages enable row level security;
+
+create policy "Users can view their own messages"
+  on ai_messages for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own messages"
+  on ai_messages for insert
+  with check (auth.uid() = user_id);
+```
+
 ---
 
 ## User Profile and Settings
@@ -207,8 +208,6 @@ graph TD
 
 ### Database Schema
 
-The user settings are stored in a new `user_settings` table in the Supabase database:
-
 ```sql
 create table user_settings (
   id uuid default gen_random_uuid() primary key,
@@ -230,197 +229,14 @@ create table user_settings (
 ### Key Components
 
 #### UserSettingsForm
-
-The `UserSettingsForm` component provides a UI for users to update their settings. It includes:
-
-- Theme selection (light, dark, system)
-- Notification preferences
-- Date/time format preferences
-- Language selection
-
-The component uses React Query hooks for data fetching and mutations:
-
-```typescript
-// Fetch user settings
-const { data: settings, isLoading, error } = useUserSettings();
-
-// Update user settings
-const updateSettings = useUpdateUserSettings();
-
-// Update settings
-await updateSettings.mutateAsync({
-  theme: 'dark',
-  notification_email: true,
-  // other settings...
-});
-```
+- Provides UI for updating user settings
+- Includes theme selection, notification preferences, date/time formats, and language
+- Uses React Query hooks for data fetching and mutations
 
 #### ThemeSwitcher
-
-The `ThemeSwitcher` component provides a UI for switching between light, dark, and system themes:
-
-```tsx
-<ThemeSwitcher className="hidden md:flex" />
-```
-
-It's integrated in:
-- The dashboard header for quick access
-- The user settings dropdown menu
-- The user settings page
+- Allows switching between light, dark, and system themes
+- Integrated in dashboard header and user settings
 
 #### Theme System
-
-The theme system uses CSS variables to define colors and other theme-specific values:
-
-```css
-:root,
-.light-theme {
-  --color-primary: 10 10 10;
-  --color-secondary: 47 60 152;
-  /* other variables... */
-}
-
-.dark-theme {
-  --color-primary: 255 255 255;
-  --color-secondary: 102 115 182;
-  /* other variables... */
-}
-```
-
-The theme is applied to the document root element using the `data-theme` attribute and CSS classes.
-
-### Development Mode Support
-
-The user settings feature includes development mode support:
-
-```typescript
-// Default settings for development mode
-const defaultSettings: UserSettings = {
-  id: 'dev-settings-id',
-  user_id: TEST_USER_ID,
-  theme: 'light',
-  // other default settings...
-};
-
-// In development mode, return default settings
-if (isDevelopment) {
-  console.log("Development mode: Using default user settings");
-  return defaultSettings;
-}
-```
-
-### Component Specifications
-
-#### 1. AI Quick Search
-- Search widget that uses Perplexity API for instant answers
-- Expands when engaged and collapses when not in use
-- Implemented as a client component
-- Integrated in the main dashboard UI
-
-#### 2. AI Project Assistant
-- Personal assistant with access to all user data
-- Located in the right sidebar
-- Persists conversation history using Supabase
-- Helps with calendar, tasks, documents, and project information
-
-#### 3. AI Assistants (Left Sidebar)
-- Specialized AI agents for Research, Legal, and Finance
-- Implemented as separate pages accessible from the left sidebar
-- Each page has a dedicated chat interface for that specific assistant
-- Late-stage buildout feature
-
-### Database Schema
-
-```sql
-create table ai_messages (
-  id uuid default gen_random_uuid() primary key,
-  content text not null,
-  is_user boolean not null,
-  assistant_type text not null default 'personal',
-  created_at timestamptz default now(),
-  user_id uuid references auth.users not null
-);
-
--- RLS Policies
-alter table ai_messages enable row level security;
-
-create policy "Users can view their own messages"
-  on ai_messages for select
-  using (auth.uid() = user_id);
-
-create policy "Users can insert their own messages"
-  on ai_messages for insert
-  with check (auth.uid() = user_id);
-```
-
-### Implementation Phases
-
-1. **AI Quick Search**: Basic search interface with Perplexity API integration
-2. **AI Project Assistant**: Chat interface in right sidebar with message history
-3. **AI Assistant Base Infrastructure**: Shared chat interface component
-4. **Research Assistant**: Specialized research capabilities (late stage)
-5. **Legal Assistant**: Document analysis capabilities (late stage)
-6. **Finance Assistant**: Financial data integration (late stage)
-
-### Development Mode Support
-
-```typescript
-// AI component with development mode support
-"use client"
-
-import { useState, useEffect } from "react";
-
-// Mock AI responses for development mode
-const mockAIResponses = {
-  "what are my critical tasks due this week?": "You have 3 critical tasks due this week:\n\n1. Complete project proposal (Due: Wednesday)\n2. Review quarterly budget (Due: Thursday)\n3. Prepare client presentation (Due: Friday)",
-  // Other mock responses...
-};
-
-// Development mode detection
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-export function AIProjectAssistant() {
-  // Component implementation
-  
-  async function processMessage(userMessage: string) {
-    // Create user message
-    const userChatMessage = { /* ... */ };
-    setMessages(prev => [...prev, userChatMessage]);
-    setInput("");
-    setIsLoading(true);
-    
-    try {
-      let aiResponse;
-      
-      // In development mode, use mock responses
-      if (isDevelopment) {
-        // Convert to lowercase for case-insensitive matching
-        const lowerMessage = userMessage.toLowerCase();
-        
-        // Check for exact matches in our mock responses
-        if (mockAIResponses[lowerMessage]) {
-          aiResponse = mockAIResponses[lowerMessage];
-        } else {
-          // For messages we don't have exact matches for, generate a generic response
-          aiResponse = `I'm running in development mode with limited capabilities. You asked: "${userMessage}"`;
-        }
-        
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      } else {
-        // In production, use real AI APIs
-        aiResponse = await processAIResponse(userMessage);
-      }
-      
-      // Create AI message
-      const aiChatMessage = { /* ... */ };
-      setMessages(prev => [...prev, aiChatMessage]);
-    } catch (error) {
-      // Error handling
-    } finally {
-      setIsLoading(false);
-    }
-  }
-  
-  // Render component
-}
+- Uses CSS variables for theme-specific values
+- Applied to document root element using data-theme attribute

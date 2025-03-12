@@ -114,7 +114,7 @@ export function DroppableTaskSection({
                     </div>
                     <div className="font-medium text-base">{title}</div>
                 </div>
-                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs text-black dark:text-white">
                     {tasks.length}
                 </div>
             </div>

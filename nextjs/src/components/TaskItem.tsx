@@ -245,7 +245,7 @@ export function TaskItem({
             ref={dragRef}
             className={cn(
                 "px-4 py-3 transition-all duration-200 relative group",
-                task.completed ? "bg-gray-50" : isOverdue ? "bg-red-50/10" : "bg-transparent",
+                isOverdue && !task.completed ? "bg-red-50/10" : "bg-transparent",
                 isHovered && "bg-gray-50/80",
                 isMultiSelectMode && isSelected && "bg-primary/10",
                 isDragging && "opacity-50 border border-dashed border-primary bg-primary/5"

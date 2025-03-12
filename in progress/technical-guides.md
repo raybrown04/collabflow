@@ -1,5 +1,7 @@
 # Technical Guides
 
+{/* Updated to reflect current project state (sidebar, calendar, events list completed) - 3/4/2025 */}
+
 This document consolidates technical guidelines for the CollabFlow project, covering styling, component development, and database integration.
 
 ## Table of Contents
@@ -44,6 +46,35 @@ interface SidebarConfig {
 }
 ```
 
+#### Task List
+The task list uses a fixed height and displays tasks grouped by timeframe (Today, Tomorrow, etc.):
+
+```tsx
+// TaskList.tsx
+<div
+    ref={containerRef}
+    className="h-[500px] overflow-y-auto" /* Fixed height instead of max-height */
+    onScroll={handleScroll}
+>
+```
+
+The task items now display the associated project or list instead of the due date:
+
+```tsx
+// TaskItem.tsx
+<div className="flex items-center mt-2 text-xs text-foreground">
+    <Tag className="h-3 w-3 mr-1" />
+    <span className={cn(
+        "font-medium",
+        task.completed && "line-through"
+    )}>
+        {task.list_id && taskLists.find(list => list.id === task.list_id)
+            ? taskLists.find(list => list.id === task.list_id)?.name
+            : "Personal"}
+    </span>
+</div>
+```
+
 #### Expandable Menu Items
 The sidebar uses CSS grid-based transitions for smooth expanding/collapsing menu items:
 
@@ -83,45 +114,7 @@ The sidebar uses CSS grid-based transitions for smooth expanding/collapsing menu
 
 ## Next.js Component Development
 
-### Development Mode Pattern
-
-When implementing components that require authentication or database access, follow this development mode pattern:
-
-```typescript
-// Check if we're in development mode
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-// Component with development mode support
-export function YourComponent() {
-  // Component implementation
-  
-  async function fetchData() {
-    // In development mode, use mock data
-    if (isDevelopment) {
-      console.log("Development mode: Using mock data");
-      return mockData;
-    }
-    
-    // In production, fetch from API
-    try {
-      // API call logic
-    } catch (err) {
-      console.error('Error:', err);
-      
-      // Fallback to mock data in development mode if there's an error
-      if (isDevelopment) {
-        console.warn("Falling back to mock data after error");
-        return mockData;
-      }
-      
-      throw err;
-    }
-  }
-}
-```
-
 ### Form Field Accessibility
-
 For better accessibility, ensure all form fields have proper `id` and `name` attributes that match their labels:
 
 ```typescript
@@ -147,7 +140,6 @@ For better accessibility, ensure all form fields have proper `id` and `name` att
 ```
 
 ### Type Compatibility
-
 When working with nullable fields, ensure proper type handling:
 
 ```typescript
@@ -170,73 +162,7 @@ const eventData = {
 
 ## Supabase Integration
 
-### Development Mode Improvements
-
-We've implemented several improvements to make features work seamlessly in development mode without requiring authentication:
-
-#### 1. Mock Data in Development Mode
-
-```typescript
-// Check if we're in development mode
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-async function fetchEventsForMonth(date: Date): Promise<CalendarEvent[]> {
-    // In development mode, return test events
-    if (isDevelopment) {
-        console.log("Development mode: Using test events")
-        return testEvents
-    }
-    
-    // Otherwise, fetch from Supabase
-    // ...
-}
-```
-
-#### 2. Mock Operations
-
-```typescript
-async function createEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): Promise<CalendarEvent> {
-    // In development mode, create a mock event
-    if (isDevelopment) {
-        console.log("Development mode: Creating mock event", event)
-        const mockEvent: CalendarEvent = {
-            id: Math.random().toString(36).substring(2, 15),
-            created_at: new Date().toISOString(),
-            ...event
-        }
-        
-        // Add to test events for display
-        testEvents.push(mockEvent)
-        
-        return mockEvent
-    }
-    
-    // Otherwise, create in Supabase
-    // ...
-}
-```
-
-#### 3. Authentication Bypass
-
-```typescript
-// In EventForm.tsx
-if (process.env.NODE_ENV === 'development') {
-    console.log("Development mode: Using mock users list")
-    setUsers([
-        {
-            id: userId,
-            email: user?.email || 'Current User'
-        },
-        {
-            id: "test-user-id-123456789",
-            email: "test@example.com"
-        }
-    ])
-}
-```
-
 ### Database Migration Guide
-
 When applying migrations to your Supabase database:
 
 1. **Local Development**:
@@ -259,7 +185,6 @@ When applying migrations to your Supabase database:
 5. **Verify the migration** in the Supabase dashboard
 
 ### Row Level Security (RLS) Policies
-
 Always implement proper RLS policies for all tables:
 
 ```sql

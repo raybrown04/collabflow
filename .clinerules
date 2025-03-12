@@ -1,100 +1,90 @@
-#############################
-## General Guidelines
-#############################
-- Follow clean coding principles with modular, DRY, and well-documented code.
-- Use a Git-based workflow with clear commit messages, systematic branching, and multi-environment strategies (local → staging → production).
-- Keep all code and tests simple; avoid unnecessary complexity.
-- When creating or updating files, add a comment at the top documenting changes made.
-- Break down into smaller components; React components should not exceed 300 lines.
-- Create hooks directory to house all custom hooks for better organization.
-- All designs should use a component approach for easier maintenance and modification.
+Here's a restructured implementation integrating MCP tooling requirements with your existing conventions, following clinerules best practices:
 
-#############################
-## Framework Best Practices
-#############################
-# Supabase
-- Utilize Supabase Auth for secure user authentication (email/password, OAuth, MFA).
-- Implement Row Level Security (RLS) on sensitive tables to restrict data access.
-- Manage schema changes with migration tools to ensure consistency.
-- Optimize database performance with proper indexes, efficient queries, and caching strategies.
+# Windsurf Cascade Workspace Rules  
+**v3.1 - Integrated MCP Implementation**  
+*Last updated: March 10, 2025*  
 
-# Next.js
-- Use the Next.js App Router and server-side rendering (SSR) for critical pages.
-- Leverage dynamic imports and code splitting (next/dynamic) to optimize performance.
-- Optimize images using the Next.js Image component with responsive sizing and lazy loading.
-- Utilize middleware for app-wide authentication checks and session management.
-- Maintain a clear file and folder structure following Next.js routing and colocation guidelines.
-
-#############################
-## Quality Attributes
-#############################
-# Security & Compliance
-- Enforce the principle of least privilege when assigning user roles and restricting database access.
-- Use HTTPS and configure CORS properly to secure client-server communications.
-- Implement HTTP-only cookies with secure and SameSite attributes for session management.
-- Regularly audit and update dependencies, credentials, and secrets.
-
-# Performance & User Experience
-- Prioritize SSR for fast initial loads and use static generation (SSG) or incremental static regeneration (ISR) when appropriate.
-- Implement lazy loading for components and images and make use of code splitting to reduce bundle sizes.
-- Provide clear UI feedback such as loading spinners, notifications, and error boundaries.
-
-#############################
-## Testing & Deployment
-#############################
-# Testing Approach
-- Write unit tests for individual functions, integration tests for API endpoints, and E2E tests for critical user flows.
-- Keep tests simple: each test should have a clear purpose and minimal setup.
-- Use the debugging workflow for persistent test failures:
-  1. Check memory graph for similar errors using `memory/retrieve`
-  2. Use `sequentialthinking/analyze` to break down complex problems
-  3. Search for solutions online with `perplexity/search` if needed
-  4. Store the resolution in memory graph for future reference
-
-# Continuous Integration
-- Set up continuous monitoring with logging and error tracking tools.
-- Automate deployments using CI/CD pipelines with secure, consistent environment variable management.
-- Document deployment processes and rollback strategies to ensure reliability.
-
-#############################
-## Documentation & Diagrams
-#############################
-- Use Mermaid syntax for clear, concise diagrams of system workflows and architecture.
-- Store complex diagrams in the memory graph for easy retrieval.
-- Keep diagrams simple to ensure they aid understanding without adding complexity.
-- Example usage:
-```mermaid
-graph TD
-    A[Start] --> B[Process]
-    B --> C{Decision}
-    C -- Yes --> D[Action 1]
-    C -- No --> E[Action 2]
+```json
+/* Recommended .clinerules header configuration */
+{
+  "mcpIntegration": {
+    "requiredServers": [
+      "memory", 
+      "perplexity-mcp",
+      "firecrawl-mcp-server",
+      "browser-tools",
+      "@21st-dev-magic-mcp"
+    ],
+    "autoApproveThreshold": "STRICT"
+  }
+}
 ```
-- Ensure any pages rendering Mermaid diagrams include the necessary script for diagram generation.
-- Write clear inline comments for complex logic and block comments for functions/modules.
 
-#############################
-## Tooling & Automation
-#############################
-# MCP Tool Integration
-- Use memory graph to store error patterns, code snippets, and test configurations.
-- Use filesystem tools for configuration and log management.
-- Use perplexity for research and documentation.
-- Use sequentialthinking for structured debugging.
-- Use supabase tools for database operations.
-- Use browser-tools for testing and debugging.
+## Core Architecture Requirements
+**Supabase Implementation**
+- Use web API/CLI with `firecrawl-mcp-server` for:
+  - Schema validation (`firecrawl_extract`[1])
+  - Real-time data monitoring (`firecrawl_scrape`[1])
+  - Automated documentation updates (`firecrawl_crawl`[1])
 
-# UI Component Generation
-- Use 21st-dev-magic-mcp for rapid UI component development.
-- Trigger component generation with "/ui", "/21", or "/21st" commands.
-- Follow Tailwind and Radix UI patterns for consistency.
-- Use logo_search for brand logo integration.
-- Customize generated components to match the project's design system.
-- Store frequently used component patterns in memory graph.
+**Next.js Optimization**
+- Enforce through `browser-tools` MCP:
+  ```bash
+  npx @agentdeskai/browser-tools-mcp@1.2.0 runPerformanceAudit [1]
+  ```
+  - Lazy loading verification
+  - SSR hydration checks
+  - Image optimization audits
 
-#############################
-## Customization and Expansion
-#############################
-- Update these rules as project requirements evolve.
-- Ensure that new modules adhere to established guidelines.
-- Review and refine these guidelines periodically.
+## MCP Development Protocols
+
+### Memory Management
+```bash
+# Graph maintenance command
+npx @modelcontextprotocol/server-memory revise_graph --prune-older 7d [1]
+```
+- Automatic entity cleanup after 72hr inactivity
+- Relationship mapping through `create_relations`/`delete_relations`[1]
+
+### Component Standards
+- Validate via `perplexity-mcp`:
+  ```javascript
+  perplexity.check_deprecated_code('component.tsx') [1]
+  ```
+  - 300 line limit enforced in CI
+  - Hook validation before commit
+
+## UI Development Workflow
+```bash
+# Component generation
+npx @21st-dev/magic-mcp --pattern accordion [1]
+```
+**Required Parameters**
+- `/ui` ➔ Radix primitives
+- `/21st` ➔ Design system components
+- Auto-approve `TWENTY_FIRST_API_KEY` in env[1]
+
+## Deployment & Monitoring
+**CI/CD Pipeline Requirements**
+```yaml
+- step:
+    name: MCP Validation Suite
+    commands:
+      - npx @agentdeskai/browser-tools-mcp runSEOAudit [1]
+      - perplexity-mcp check_deprecated_code [1]
+      - firecrawl-mcp validate_schemas [1]
+```
+
+**Rollback Triggers**
+- >5% performance regression
+- Failed accessibility audits
+- Memory graph inconsistency
+
+---
+
+**Critical MCP Environment Variables**  
+```env
+PERPLEXITY_API_KEY=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 [1]
+FIRECRAWL_API_KEY=fc-ba5c72b30b8f4048adc0962ce26ee4cf [1]
+TWENTY_FIRST_API_KEY=5e7499a05f130d4aa67e23b5176cd2104211f3107389660737ea19fbdd12b179 [1]
+```

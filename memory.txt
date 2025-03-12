@@ -1,0 +1,99 @@
+{
+  "entities": [
+    {
+      "type": "entity",
+      "name": "CollabFlow Project",
+      "entityType": "project",
+      "observations": [
+        "Project Overview: A web application designed to streamline collaboration and project management for teams",
+        "Core Features: Task Management, Collaboration Tools, Project Boards, User Authentication, Real-Time Updates, File Attachments, Search and Filters",
+        "Target Audience: Small to medium-sized teams, Freelancers, Organizations seeking a lightweight alternative to complex tools",
+        "Technical Stack: Frontend: Next.js, Tailwind CSS, React Context API or Zustand; Backend: Supabase (PostgreSQL), Supabase Auth, Supabase Realtime",
+        "Goals: MVP Delivery by June 2025, User Adoption, Performance, Scalability",
+        "Current Status: Core infrastructure built with Next.js and Supabase, essential UI components completed, role-based access control implemented"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "User Personas",
+      "entityType": "personas",
+      "observations": [
+        "Team Lead: Manages projects, assigns tasks, and monitors progress; needs clear project overview and team performance metrics",
+        "Project Member: Executes tasks, collaborates with team members, and updates statuses; needs simple tracking and communication tools",
+        "Freelancer: Manages multiple clients and projects simultaneously; needs flexible organization, time tracking, and prioritization tools"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "Technical Architecture",
+      "entityType": "architecture",
+      "observations": [
+        "Frontend: Next.js App Router, React Server Components, Tailwind CSS, shadcn/ui",
+        "Data Flow: Supabase ↔ Next.js API routes ↔ Client components, Supabase Realtime",
+        "Security: Row Level Security (RLS), Supabase Auth, Middleware",
+        "UI Components: shadcn/ui, Radix UI Primitives, Tailwind CSS Styling",
+        "Styling: RBIIILV Design System with CSS variables, dark mode support",
+        "State Management: React Query for data fetching, caching, and mutations"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "Completed Features",
+      "entityType": "features",
+      "observations": [
+        "Calendar Widget: Month view with event indicators, creation/editing forms, Outlook-style navigation, recurring events",
+        "Task Management: Creation with priority indicators, status management, filtering and sorting, infinite scrolling",
+        "Drag-and-Drop: Calendar event rescheduling with React DnD",
+        "Role-Based Access Control: Admin and user roles with proper RLS policies",
+        "Design System: RBIIILV v1.0 implementation with theming support",
+        "AI Components: Quick Search and Project Assistant integrations"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "Current Priorities",
+      "entityType": "priorities",
+      "observations": [
+        "Testing Suite: Jest and React Testing Library setup, unit/integration/E2E tests",
+        "Notification System: Real-time and email notifications with user preferences",
+        "Third-Party Calendar Syncing: Google, iCloud, and Outlook Calendar integrations"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "MCP Server Integrations",
+      "entityType": "integrations",
+      "observations": [
+        "supabase-mcp: Database operations and schema management",
+        "perplexity-mcp: AI-powered search and documentation assistance",
+        "sequentialthinking: Complex problem-solving and step-by-step guidance",
+        "firecrawl-mcp: Web scraping and content extraction",
+        "browser-tools: Browser debugging and testing",
+        "21st-dev-magic-mcp: UI component generation and logo integration",
+        "memory: Project documentation and knowledge storage"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "Development Approach",
+      "entityType": "methodology",
+      "observations": [
+        "Iterative Development: Break features into smaller tasks, implement one at a time",
+        "Code Quality: Follow clean coding principles, keep components under 300 lines",
+        "MCP Integration: Leverage existing MCP servers for relevant functionality",
+        "Testing: Comprehensive unit, integration, and E2E tests",
+        "Documentation: Maintain up-to-date documentation for all components"
+      ]
+    },
+    {
+      "type": "entity",
+      "name": "Future Enhancements",
+      "entityType": "roadmap",
+      "observations": [
+        "Specialized AI Assistants: Research, Legal, and Finance assistants",
+        "Advanced User Profiles: User pictures, activity history, achievements",
+        "Team Collaboration: Shared calendars/tasks, team chat, permission management"
+      ]
+    }
+  ]
+}

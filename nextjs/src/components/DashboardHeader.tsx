@@ -47,7 +47,7 @@ export function DashboardHeader({
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         // Implement search functionality
-        console.log("Search query:", searchQuery)
+        // Search functionality will be implemented in the future
     }
 
     const handleLogout = async () => {
@@ -55,7 +55,7 @@ export function DashboardHeader({
             // Implement logout functionality
             window.location.href = '/auth/login'
         } catch (error) {
-            console.error('Error logging out:', error)
+            // Handle logout error
         }
     }
 
@@ -83,7 +83,12 @@ export function DashboardHeader({
                     <ThemeSwitcher className="hidden md:block" />
                 </div>
 
-                <Button variant="ghost" size="icon" className="relative">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="relative"
+                    aria-label="Notifications"
+                >
                     <Bell className="h-5 w-5" />
                     <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
                 </Button>

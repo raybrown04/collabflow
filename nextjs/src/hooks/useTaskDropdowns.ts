@@ -22,7 +22,10 @@ export function useTaskDropdowns() {
 
     // Toggle dropdown visibility
     const toggleDropdown = (name: string) => {
-        setOpenDropdown(prev => prev === name ? null : name)
+        // Only handle 'more' dropdown now that filter options are integrated
+        if (name === 'more') {
+            setOpenDropdown(prev => prev === name ? null : name)
+        }
     }
 
     // Check if a dropdown is open

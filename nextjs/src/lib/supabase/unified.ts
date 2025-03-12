@@ -93,6 +93,60 @@ export class SassClient {
     async updateAsDone(id: string) {
         return this.client.from('todo_list').update({ done: true }).eq('id', parseInt(id))
     }
+    
+    async toggleTaskCompletion(id: string, completed: boolean) {
+        console.log(`=== SassClient.toggleTaskCompletion ===`);
+        console.log(`Parameters - id: ${id}, completed: ${completed}`);
+        
+        try {
+            // Verify the task exists before updating
+            console.log(`Checking if task ${id} exists`);
+            const { data: existingTask, error: fetchError } = await this.client
+                .from('todo_list')
+                .select('*')
+                .eq('id', parseInt(id))
+                .single();
+                
+            if (fetchError) {
+                console.error(`Error fetching task ${id}:`, fetchError);
+                throw fetchError;
+            }
+            
+            if (!existingTask) {
+                console.error(`Task ${id} not found`);
+                throw new Error(`Task ${id} not found`);
+            }
+            
+            console.log(`Found existing task:`, existingTask);
+            console.log(`Current done status: ${existingTask.done}, updating to: ${completed}`);
+            
+            // Prepare update data
+            const updateData = { 
+                done: completed,
+                done_at: completed ? new Date().toISOString() : null 
+            };
+            console.log(`Update data:`, updateData);
+            
+            // Perform the update
+            console.log(`Updating task ${id} in todo_list table`);
+            const { data, error } = await this.client
+                .from('todo_list')
+                .update(updateData)
+                .eq('id', parseInt(id))
+                .select();
+                
+            if (error) {
+                console.error(`Error updating task ${id}:`, error);
+                throw error;
+            }
+            
+            console.log(`Task ${id} updated successfully:`, data);
+            return { success: true, data };
+        } catch (error) {
+            console.error(`Exception in toggleTaskCompletion:`, error);
+            throw error;
+        }
+    }
 
     getSupabaseClient() {
         return this.client;
