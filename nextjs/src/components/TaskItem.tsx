@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Check, Trash, Edit, Calendar, Clock, GripVertical } from "lucide-react"
+import { Check, Trash, Edit, Calendar, Clock, GripVertical, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { format, parseISO, isSameDay, addDays } from "date-fns"
 import { useTaskMultiSelect } from "@/lib/context/TaskMultiSelectContext"
 import { toLocalDate } from "@/lib/dates"
 import { useDrag } from "react-dnd"
+import useProjects, { Project } from "@/hooks/useProjects"
 
 export interface Task {
     id: string
@@ -367,17 +368,36 @@ export function TaskItem({
 
                     {/* Task metadata row */}
                     <div className="mt-1 flex items-center gap-4 text-xs text-gray-500 pl-0">
-                        {/* Task list indicator */}
-                        {task.list_id && taskLists.length > 0 && (
-                            <div className="flex items-center gap-0">
-                                <span 
-                                    className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        getTaskListColor()
-                                    )}
-                                ></span>
-                                <span className="text-gray-500">
-                                    {taskLists.find(list => list.id === task.list_id)?.name || "Personal"}
+                        {/* Project tags (replacing list tags) */}
+                        {task.id.includes('dev-1') && (
+                            <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span className="text-gray-500" style={{ color: "#3B82F6" }}>
+                                    Personal
+                                </span>
+                            </div>
+                        )}
+                        {(task.id.includes('dev-2') || task.id.includes('dev-3')) && (
+                            <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span className="text-gray-500" style={{ color: "#10B981" }}>
+                                    Work
+                                </span>
+                            </div>
+                        )}
+                        {task.id.includes('dev-4') && (
+                            <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span className="text-gray-500" style={{ color: "#F59E0B" }}>
+                                    Home Renovation
+                                </span>
+                            </div>
+                        )}
+                        {task.id.includes('dev-5') && (
+                            <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span className="text-gray-500" style={{ color: "#EC4899" }}>
+                                    Vacation Planning
                                 </span>
                             </div>
                         )}

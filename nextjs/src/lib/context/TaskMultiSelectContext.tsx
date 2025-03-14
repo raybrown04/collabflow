@@ -19,10 +19,12 @@ export function TaskMultiSelectProvider({ children }: { children: ReactNode }) {
   const [isMultiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
-  const setMultiSelectModeWithLog = (mode: boolean) => {
-    console.log("TaskMultiSelectContext: Setting multi-select mode to:", mode);
+  const setMultiSelectModeWithLog = React.useCallback((mode: boolean) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("TaskMultiSelectContext: Setting multi-select mode to:", mode);
+    }
     setMultiSelectMode(mode);
-  };
+  }, []);
 
   const toggleTaskSelection = (taskId: string) => {
     console.log("TaskMultiSelectContext: Toggling selection for task:", taskId);
@@ -52,13 +54,15 @@ export function TaskMultiSelectProvider({ children }: { children: ReactNode }) {
 
   // Log when multi-select mode changes
   useEffect(() => {
-    console.log("TaskMultiSelectContext: Multi-select mode is now:", isMultiSelectMode);
+    if (process.env.NODE_ENV === 'development' && isMultiSelectMode) {
+      console.log("TaskMultiSelectContext: Multi-select mode active");
+    }
   }, [isMultiSelectMode]);
 
-  // Log when selected tasks change
   useEffect(() => {
-    console.log("TaskMultiSelectContext: Selected tasks count:", selectedTaskIds.length);
-    console.log("TaskMultiSelectContext: Selected task IDs:", selectedTaskIds);
+    if (process.env.NODE_ENV === 'development' && selectedTaskIds.length > 0) {
+      console.log("TaskMultiSelectContext: Selected tasks count:", selectedTaskIds.length);
+    }
   }, [selectedTaskIds]);
 
   return (

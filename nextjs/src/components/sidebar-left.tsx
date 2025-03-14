@@ -10,10 +10,12 @@
  * - Added expandable menu items using CSS grid transitions
  * - Implemented inert attribute for accessibility
  * - Added JavaScript to toggle expansion/collapse
+ * - Added project list with real-time filtering
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Sidebar } from "@/components/ui/sidebar";
@@ -33,8 +35,25 @@ import {
     Scale,
     DollarSign,
     File,
-    Mail
+    Mail,
+    Plus
 } from "lucide-react";
+
+// Type definition for projects
+interface Project {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+}
+
+// Mock projects for development (in production, this would come from useProjects hook)
+const mockProjects: Project[] = [
+  { id: 'proj-1', name: 'Marketing Campaign', color: '#3B82F6', description: 'Q2 Product Launch' },
+  { id: 'proj-2', name: 'Website Redesign', color: '#10B981', description: 'UX Improvements' },
+  { id: 'proj-3', name: 'Mobile App', color: '#F59E0B', description: 'iOS and Android' },
+  { id: 'proj-4', name: 'Annual Report', color: '#EF4444', description: 'Financial documents' }
+];
 
 // Badge component for "Coming Soon" indicators
 function Badge({ children }: { children: React.ReactNode }) {
@@ -47,6 +66,13 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 export function SidebarLeft() {
     const { user, isAdmin } = useAuth();
+    const pathname = usePathname();
+    
+    // In a real app, we would use a hook to fetch projects
+    // const { data: projects, isLoading: projectsLoading } = useProjects();
+    const projects = mockProjects;
+    const projectsLoading = false;
+    
     // State to track which menu items are expanded
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
         projects: false,
@@ -55,6 +81,34 @@ export function SidebarLeft() {
         aiAssistants: false
     });
 
+    // Handle auto-expand/collapse of menus based on current path
+    useEffect(() => {
+        // Create a mapping of path prefixes to menu keys
+        const pathMenuMapping = {
+            '/app/projects': 'projects',
+            '/app/ai': 'aiAssistants',
+            '/app/reports': 'reports',
+            '/app/admin': 'admin'
+        };
+        
+        const newExpandedState = { ...expandedItems };
+        
+        // Reset all to false first
+        Object.keys(newExpandedState).forEach(key => {
+            newExpandedState[key] = false;
+        });
+        
+        // Then set the current one to true if applicable
+        for (const [pathPrefix, menuKey] of Object.entries(pathMenuMapping)) {
+            if (pathname?.startsWith(pathPrefix)) {
+                newExpandedState[menuKey] = true;
+                break; // Only expand one menu at a time
+            }
+        }
+        
+        setExpandedItems(newExpandedState);
+    }, [pathname]); // Don't include expandedItems in dependencies to prevent loops
+
     // Toggle expansion state of a menu item
     const toggleExpand = (itemKey: string) => {
         setExpandedItems(prev => ({
@@ -62,6 +116,9 @@ export function SidebarLeft() {
             [itemKey]: !prev[itemKey]
         }));
     };
+
+    // CSS class for consistent button styling
+    const menuItemStyle = "max-w-full mx-0 px-2";
 
     return (
         <Sidebar>
@@ -79,7 +136,8 @@ export function SidebarLeft() {
                         href="/app"
                         className={cn(
                             buttonVariants({ variant: "ghost" }),
-                            "justify-start"
+                            "justify-start w-full",
+                            menuItemStyle
                         )}
                     >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -91,7 +149,8 @@ export function SidebarLeft() {
                         href="/app/documents"
                         className={cn(
                             buttonVariants({ variant: "ghost" }),
-                            "justify-start"
+                            "justify-start w-full",
+                            menuItemStyle
                         )}
                     >
                         <File className="mr-2 h-4 w-4" />
@@ -103,7 +162,8 @@ export function SidebarLeft() {
                         href="/app/email"
                         className={cn(
                             buttonVariants({ variant: "ghost" }),
-                            "justify-start"
+                            "justify-start w-full",
+                            menuItemStyle
                         )}
                     >
                         <Mail className="mr-2 h-4 w-4" />
@@ -116,40 +176,69 @@ export function SidebarLeft() {
                             onClick={() => toggleExpand('projects')}
                             className={cn(
                                 buttonVariants({ variant: "ghost" }),
-                                "justify-between w-full"
+                                "justify-start w-full",
+                                menuItemStyle,
+                                pathname?.startsWith('/app/projects') && "bg-accent text-accent-foreground"
                             )}
                             aria-expanded={expandedItems.projects}
                         >
-                            <span className="flex items-center">
-                                <FolderKanban className="mr-2 h-4 w-4" />
-                                Projects
-                            </span>
-                            {expandedItems.projects ? (
-                                <ChevronDown className="h-4 w-4" />
-                            ) : (
-                                <ChevronRight className="h-4 w-4" />
-                            )}
+                            <div className="flex items-center justify-between w-full">
+                                <span className="flex items-center">
+                                    <FolderKanban className="mr-2 h-4 w-4" />
+                                    Projects
+                                </span>
+                                {expandedItems.projects ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                )}
+                            </div>
                         </button>
                         <div inert={!expandedItems.projects || undefined}>
                             <div className="pl-6 py-1">
                                 <ul className="space-y-1">
+                                    {/* "All Projects" link removed as requested */}
+                                    
+                                    {/* Display active projects */}
+                                    {projectsLoading ? (
+                                        <li className="px-3 py-2 text-xs text-muted-foreground">
+                                            Loading projects...
+                                        </li>
+                                    ) : projects && projects.length > 0 ? (
+                                        projects.map((project: Project) => (
+                                            <li key={project.id}>
+                                                <Link
+                                                    href={`/app/projects/${project.id}`}
+                                                    className={cn(
+                                                        buttonVariants({ variant: "ghost" }),
+                                                        "justify-start h-9 text-sm w-full",
+                                                        menuItemStyle,
+                                                        pathname === `/app/projects/${project.id}` && "bg-accent/50 text-accent-foreground"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center w-full overflow-hidden">
+                                                        <div 
+                                                            className="w-2 h-2 rounded-full mr-2 flex-shrink-0" 
+                                                            style={{ backgroundColor: project.color }}
+                                                        />
+                                                        <span className="truncate">{project.name}</span>
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="px-3 py-2 text-xs text-muted-foreground">
+                                            No active projects
+                                        </li>
+                                    )}
+                                    
                                     <li>
                                         <Link
-                                            href="/app/tasks"
+                                            href="/app/projects?view=archived"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
-                                            )}
-                                        >
-                                            Active Projects
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link
-                                            href="#"
-                                            className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
                                             Archived Projects
@@ -157,12 +246,14 @@ export function SidebarLeft() {
                                     </li>
                                     <li>
                                         <Link
-                                            href="#"
+                                            href="/app/projects/new"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
+                                            <Plus className="mr-1 h-3 w-3" />
                                             Create New
                                         </Link>
                                     </li>
@@ -176,17 +267,15 @@ export function SidebarLeft() {
                         href="#"
                         className={cn(
                             buttonVariants({ variant: "ghost" }),
-                            "justify-start"
+                            "justify-start w-full",
+                            menuItemStyle
                         )}
                     >
                         <CheckSquare className="mr-2 h-4 w-4" />
                         Tasks
                     </Link>
 
-                    {/* AI Assistants Section */}
-                    <div className="mt-4 mb-2 px-2">
-                        <span className="text-sm font-semibold text-muted-foreground">AI Assistants</span>
-                    </div>
+                    {/* Section header removed as requested */}
 
                     {/* Expandable menu item - AI Assistants */}
                     <li className="menu-item list-none">
@@ -194,19 +283,22 @@ export function SidebarLeft() {
                             onClick={() => toggleExpand('aiAssistants')}
                             className={cn(
                                 buttonVariants({ variant: "ghost" }),
-                                "justify-between w-full"
+                                "justify-start w-full",
+                                menuItemStyle
                             )}
                             aria-expanded={expandedItems.aiAssistants}
                         >
-                            <span className="flex items-center">
-                                <Bot className="mr-2 h-4 w-4" />
-                                AI Assistants
-                            </span>
-                            {expandedItems.aiAssistants ? (
-                                <ChevronDown className="h-4 w-4" />
-                            ) : (
-                                <ChevronRight className="h-4 w-4" />
-                            )}
+                            <div className="flex items-center justify-between w-full">
+                                <span className="flex items-center">
+                                    <Bot className="mr-2 h-4 w-4" />
+                                    AI Assistants
+                                </span>
+                                {expandedItems.aiAssistants ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                )}
+                            </div>
                         </button>
                         <div inert={!expandedItems.aiAssistants || undefined}>
                             <div className="pl-6 py-1">
@@ -215,23 +307,25 @@ export function SidebarLeft() {
                                         <Link
                                             href="/app/ai/personal"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
-                                            Personal Assistant
+                                            Personal
                                         </Link>
                                     </li>
                                     <li>
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full opacity-60"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                             onClick={(e) => e.preventDefault()}
                                         >
-                                            Research Assistant
+                                            Research
                                             <Badge>Coming Soon</Badge>
                                         </Link>
                                     </li>
@@ -239,12 +333,13 @@ export function SidebarLeft() {
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full opacity-60"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                             onClick={(e) => e.preventDefault()}
                                         >
-                                            Legal Assistant
+                                            Legal
                                             <Badge>Coming Soon</Badge>
                                         </Link>
                                     </li>
@@ -252,12 +347,13 @@ export function SidebarLeft() {
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full opacity-60"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                             onClick={(e) => e.preventDefault()}
                                         >
-                                            Finance Assistant
+                                            Finance
                                             <Badge>Coming Soon</Badge>
                                         </Link>
                                     </li>
@@ -272,19 +368,22 @@ export function SidebarLeft() {
                             onClick={() => toggleExpand('reports')}
                             className={cn(
                                 buttonVariants({ variant: "ghost" }),
-                                "justify-between w-full"
+                                "justify-start w-full",
+                                menuItemStyle
                             )}
                             aria-expanded={expandedItems.reports}
                         >
-                            <span className="flex items-center">
-                                <BarChart3 className="mr-2 h-4 w-4" />
-                                Reports
-                            </span>
-                            {expandedItems.reports ? (
-                                <ChevronDown className="h-4 w-4" />
-                            ) : (
-                                <ChevronRight className="h-4 w-4" />
-                            )}
+                            <div className="flex items-center justify-between w-full">
+                                <span className="flex items-center">
+                                    <BarChart3 className="mr-2 h-4 w-4" />
+                                    Reports
+                                </span>
+                                {expandedItems.reports ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                )}
+                            </div>
                         </button>
                         <div inert={!expandedItems.reports || undefined}>
                             <div className="pl-6 py-1">
@@ -293,8 +392,9 @@ export function SidebarLeft() {
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
                                             Weekly Summary
@@ -304,8 +404,9 @@ export function SidebarLeft() {
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
                                             Monthly Analytics
@@ -315,8 +416,9 @@ export function SidebarLeft() {
                                         <Link
                                             href="#"
                                             className={cn(
-                                                buttonVariants({ variant: "ghost", size: "sm" }),
-                                                "justify-start w-full"
+                                                buttonVariants({ variant: "ghost" }),
+                                                "justify-start h-9 text-sm w-full",
+                                                menuItemStyle
                                             )}
                                         >
                                             Custom Reports
@@ -340,19 +442,22 @@ export function SidebarLeft() {
                                     onClick={() => toggleExpand('admin')}
                                     className={cn(
                                         buttonVariants({ variant: "ghost" }),
-                                        "justify-between w-full"
+                                        "justify-start w-full",
+                                        menuItemStyle
                                     )}
                                     aria-expanded={expandedItems.admin}
                                 >
-                                    <span className="flex items-center">
-                                        <Users className="mr-2 h-4 w-4" />
-                                        User Management
-                                    </span>
-                                    {expandedItems.admin ? (
-                                        <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                        <ChevronRight className="h-4 w-4" />
-                                    )}
+                                    <div className="flex items-center justify-between w-full">
+                                        <span className="flex items-center">
+                                            <Users className="mr-2 h-4 w-4" />
+                                            User Management
+                                        </span>
+                                        {expandedItems.admin ? (
+                                            <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronRight className="h-4 w-4" />
+                                        )}
+                                    </div>
                                 </button>
                                 <div inert={!expandedItems.admin || undefined}>
                                     <div className="pl-6 py-1">
@@ -361,8 +466,9 @@ export function SidebarLeft() {
                                                 <Link
                                                     href="#"
                                                     className={cn(
-                                                        buttonVariants({ variant: "ghost", size: "sm" }),
-                                                        "justify-start w-full"
+                                                        buttonVariants({ variant: "ghost" }),
+                                                        "justify-start h-9 text-sm w-full",
+                                                        menuItemStyle
                                                     )}
                                                 >
                                                     User List
@@ -372,8 +478,9 @@ export function SidebarLeft() {
                                                 <Link
                                                     href="#"
                                                     className={cn(
-                                                        buttonVariants({ variant: "ghost", size: "sm" }),
-                                                        "justify-start w-full"
+                                                        buttonVariants({ variant: "ghost" }),
+                                                        "justify-start h-9 text-sm w-full",
+                                                        menuItemStyle
                                                     )}
                                                 >
                                                     Roles & Permissions
@@ -383,8 +490,9 @@ export function SidebarLeft() {
                                                 <Link
                                                     href="#"
                                                     className={cn(
-                                                        buttonVariants({ variant: "ghost", size: "sm" }),
-                                                        "justify-start w-full"
+                                                        buttonVariants({ variant: "ghost" }),
+                                                        "justify-start h-9 text-sm w-full",
+                                                        menuItemStyle
                                                     )}
                                                 >
                                                     Invite Users
@@ -399,7 +507,8 @@ export function SidebarLeft() {
                                 href="#"
                                 className={cn(
                                     buttonVariants({ variant: "ghost" }),
-                                    "justify-start"
+                                    "justify-start w-full",
+                                    menuItemStyle
                                 )}
                             >
                                 <Settings className="mr-2 h-4 w-4" />
@@ -409,7 +518,8 @@ export function SidebarLeft() {
                                 href="#"
                                 className={cn(
                                     buttonVariants({ variant: "ghost" }),
-                                    "justify-start"
+                                    "justify-start w-full",
+                                    menuItemStyle
                                 )}
                             >
                                 <ActivitySquare className="mr-2 h-4 w-4" />

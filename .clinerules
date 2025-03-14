@@ -1,8 +1,8 @@
 Here's a restructured implementation integrating MCP tooling requirements with your existing conventions, following clinerules best practices:
 
 # Windsurf Cascade Workspace Rules  
-**v3.1 - Integrated MCP Implementation**  
-*Last updated: March 10, 2025*  
+**v3.2 - Documentation Migration & Project Update**  
+*Last updated: March 12, 2025*  
 
 ```json
 /* Recommended .clinerules header configuration */
@@ -19,6 +19,26 @@ Here's a restructured implementation integrating MCP tooling requirements with y
   }
 }
 ```
+
+## Documentation Structure
+**Organized Documentation**
+- All project documentation now located in `/docs` directory:
+  - `ProjectStatus.md` - Current state and roadmap
+  - `TechnicalStack.md` - Architecture and implementation details
+  - `Frontend.md` - Frontend components and guidelines
+  - `Backend.md` - Backend services and database schema
+  - `AI.md` - AI integration components
+  - `MCP-Servers.md` - MCP server tools usage
+
+**Completed Components**
+- Calendar System (COMPLETE)
+- Task Management (COMPLETE)
+- Core Infrastructure (COMPLETE)
+
+**Priority Components**
+- Project Component (Dashboard as hub for all projects)
+- Document Management (Dropbox Integration)
+- Email Integration (Outlook, Apple Mail, Gmail)
 
 ## Core Architecture Requirements
 **Supabase Implementation**
@@ -37,6 +57,14 @@ Here's a restructured implementation integrating MCP tooling requirements with y
   - Image optimization audits
 
 ## MCP Development Protocols
+### Documentation Updates
+```bash
+# Update documentation in memory graph
+npx @modelcontextprotocol/server-memory create_entities --name "Documentation Update" --entityType "Update" [1]
+```
+- Reference `/docs` structure for all documentation needs
+- Update memory graph when documentation changes
+- Use Mermaid diagrams for visual representation
 
 ### Memory Management
 ```bash
@@ -53,6 +81,21 @@ npx @modelcontextprotocol/server-memory revise_graph --prune-older 7d [1]
   ```
   - 300 line limit enforced in CI
   - Hook validation before commit
+
+### Form Styling & Dark Mode
+- Follow the [Form Styling Guide](./docs/FormStylingGuide.md) for all form inputs
+- Use theme-aware classes for all UI elements:
+  ```jsx
+  // Always use theme variables instead of hardcoded colors
+  className="bg-background text-foreground" // ✓
+  className="bg-white text-black" // ✗
+  ```
+- Use the `.form-input` utility class for consistent styling
+- Test all components in both light and dark modes
+- Run `browser-tools` accessibility audit to verify contrast:
+  ```bash
+  npx @agentdeskai/browser-tools-mcp@1.2.0 runAccessibilityAudit [1]
+  ```
 
 ## UI Development Workflow
 ```bash

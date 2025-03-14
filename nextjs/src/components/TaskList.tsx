@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Plus, ChevronRight, Filter, Check, ListChecks } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -13,6 +13,7 @@ import useTaskLists from "@/hooks/useTaskLists"
 import useTaskDropdowns from "@/hooks/useTaskDropdowns"
 import useTaskFilters from "@/hooks/useTaskFilters"
 import { useTaskMultiSelect } from "@/lib/context/TaskMultiSelectContext"
+import useProjectTags from "@/hooks/useProjectTags"
 import TaskListFilters from "./TaskListFilters"
 import { cn } from "@/lib/utils"
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useToggleTaskCompletion } from "@/hooks/useTasks"
@@ -27,32 +28,47 @@ interface TaskListProps {
     onTaskAdded?: (task: Task) => void
     isAdmin?: boolean
     maxItems?: number
+    projectId?: string
 }
 
 export function TaskListContent({
     filter,
     onTaskAdded,
     isAdmin = false,
-    maxItems = 5
+    maxItems = 5,
+    projectId
 }: TaskListProps) {
     // Get filter states
     const { 
         statusFilter, 
-        listFilter,
         activeFilterCount
     } = useTaskFilters();
     
+    // Get project filter state from context or props
+    const { projectFilter, setProjectFilter } = useProjectTags();
+    
+    // If projectId is provided, set it as the filter
+    useEffect(() => {
+        if (projectId && projectId !== projectFilter) {
+            setProjectFilter(projectId);
+        }
+    }, [projectId, projectFilter, setProjectFilter]);
+    
     // Get multi-select state
-    const {
-        isMultiSelectMode,
-        setMultiSelectMode,
-        selectedTaskIds,
-        selectAllTasks,
-        clearSelectedTasks
-    } = useTaskMultiSelect();
+  const { 
+    isMultiSelectMode,
+    setMultiSelectMode,
+    selectedTaskIds,
+    selectAllTasks,
+    clearSelectedTasks
+  } = useTaskMultiSelect();
+
+  // Stabilize context functions
+  const stableSetMultiSelectMode = useCallback(setMultiSelectMode, []);
+  const stableClearSelectedTasks = useCallback(clearSelectedTasks, []);
     
     // Use the hooks from useTasks.ts with filters
-    const { tasks: allTasks, isLoading, error, refetch } = useTasks(filter, statusFilter, listFilter, maxItems);
+    const { tasks: allTasks, isLoading, error, refetch } = useTasks(filter, statusFilter, null, maxItems);
     
     // Log when tasks change (only in development)
     useEffect(() => {
@@ -243,9 +259,19 @@ export function TaskListContent({
             return false;
         }
         
-        // Apply list filter
-        if (listFilter && task.list_id !== listFilter) {
-            return false;
+        // Apply project filter (for development mode)
+        if (projectFilter) {
+            // In development mode, we'll use a simple pattern matching approach
+            // In production, this would use the project_tags table
+            if (projectFilter === 'proj-1' && !task.id.includes('dev-1')) {
+                return false;
+            } else if (projectFilter === 'proj-2' && !(task.id.includes('dev-2') || task.id.includes('dev-3'))) {
+                return false;
+            } else if (projectFilter === 'proj-3' && !task.id.includes('dev-4')) {
+                return false;
+            } else if (projectFilter === 'proj-4' && !task.id.includes('dev-5')) {
+                return false;
+            }
         }
         
         return true;
@@ -743,7 +769,13 @@ export function TaskListContent({
             </div>
 
             {/* Task Create Popup */}
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Dialog
+                open={isAddDialogOpen}
+                onOpenChange={useCallback((open: boolean) => {
+                    setIsAddDialogOpen(open);
+                    if (!open) stableClearSelectedTasks();
+                }, [stableClearSelectedTasks, setIsAddDialogOpen])}
+            >
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle>Add New Task</DialogTitle>
@@ -815,7 +847,13 @@ export function TaskListContent({
             </Dialog>
 
             {/* Task Edit Popup */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <Dialog
+                open={isEditDialogOpen}
+                onOpenChange={useCallback((open: boolean) => {
+                    setIsEditDialogOpen(open);
+                    if (!open) stableClearSelectedTasks();
+                }, [stableClearSelectedTasks, setIsEditDialogOpen])}
+            >
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle>Edit Task</DialogTitle>
@@ -855,11 +893,9 @@ export function TaskListContent({
 }
 
 export function TaskList(props: TaskListProps) {
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <TaskListContent {...props} />
-    </DndProvider>
-  );
+  // No longer need to check for browser environment or wrap with DndProvider
+  // since it's now handled at the AppLayoutWithCalendar level
+  return <TaskListContent {...props} />;
 }
 
 export default TaskList;

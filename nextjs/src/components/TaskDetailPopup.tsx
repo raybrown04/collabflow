@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +12,9 @@ import { Task, TaskList } from "./TaskItem"
 import { ReminderDialog } from "./ReminderDialog"
 import { RecurringDialog } from "./RecurringDialog"
 import { DueDateDialog } from "./DueDateDialog"
+import { ProjectSelector } from "./ProjectSelector"
+import { Project } from "@/hooks/useProjects"
+import useProjectTags from "@/hooks/useProjectTags"
 
 interface TaskDetailPopupProps {
     task: Task | null
@@ -172,7 +175,6 @@ export function TaskDetailPopup({
             title,
             description,
             due_date: dueDateTime,
-            list_id: listId,
             completed,
             recurrence_rule: isRecurring ? recurrenceRule : null,
             subtasks
@@ -234,7 +236,6 @@ export function TaskDetailPopup({
             due_date: dueDateTime,
             completed: false,
             priority: 'medium' as const,
-            list_id: listId,
             subtasks,
             recurrence_rule: isRecurring ? recurrenceRule : null
         }
@@ -356,9 +357,20 @@ export function TaskDetailPopup({
         }
     }
 
+    // Memoize the onOpenChange handler to prevent infinite loops
+    const handleOpenChange = useCallback((open: boolean) => {
+        // Only update state if it's different to avoid infinite loop
+        if (open !== isOpen) {
+            setIsOpen(open);
+        }
+    }, [isOpen, setIsOpen]);
+    
     return (
         <>
-            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <Dialog 
+                open={isOpen} 
+                onOpenChange={handleOpenChange}
+            >
                 <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle className="flex-1">
@@ -414,25 +426,8 @@ export function TaskDetailPopup({
                                 />
                             </div>
 
-                            {/* List selection */}
-                            <div className="space-y-2">
-                                <label htmlFor="edit-list" className="text-sm font-medium">
-                                    List
-                                </label>
-                                <select
-                                    id="edit-list"
-                                    value={listId || ""}
-                                    onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background"
-                                >
-                                    <option value="">Select a list</option>
-                                    {taskLists.map(list => (
-                                        <option key={list.id} value={list.id}>
-                                            {list.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                            {/* Project selection replaces List selection */}
+                            <ProjectSelector taskId={task?.id || null} />
 
                             <div className="space-y-2">
                                 <label htmlFor="edit-description" className="text-sm font-medium">
@@ -493,6 +488,7 @@ export function TaskDetailPopup({
                                     </Button>
                                 </div>
                             </div>
+                            
 
                             {/* Checkbox for recurring tasks */}
                             <div className="flex items-center">
@@ -610,25 +606,8 @@ export function TaskDetailPopup({
                                 />
                             </div>
 
-                            {/* List selection */}
-                            <div className="space-y-2">
-                                <label htmlFor="create-list" className="text-sm font-medium">
-                                    List
-                                </label>
-                                <select
-                                    id="create-list"
-                                    value={listId || ""}
-                                    onChange={(e) => setListId(e.target.value || null)}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background"
-                                >
-                                    <option value="">Select a list</option>
-                                    {taskLists.map(list => (
-                                        <option key={list.id} value={list.id}>
-                                            {list.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                            {/* Project selection replaces List selection */}
+                            <ProjectSelector taskId={null} />
 
                             <div className="space-y-2">
                                 <label htmlFor="create-description" className="text-sm font-medium">
@@ -689,6 +668,7 @@ export function TaskDetailPopup({
                                     </Button>
                                 </div>
                             </div>
+                            
 
                             {/* Checkbox for recurring tasks */}
                             <div className="flex items-center">

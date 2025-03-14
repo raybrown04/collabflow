@@ -6,15 +6,13 @@ import { useTaskFiltersContext } from "@/lib/context/TaskFiltersContext";
  * useTaskFilters hook
  * 
  * A custom hook for accessing task filtering states from the TaskFiltersContext.
- * Supports filtering by status (completed/incomplete) and task list.
+ * Supports filtering by status (completed/incomplete) and tags.
  */
 export function useTaskFilters() {
   // Get filter states from context
   const {
     statusFilter,
     setStatusFilter,
-    listFilter,
-    setListFilter,
     tagFilter,
     setTagFilter,
     resetFilters,
@@ -27,11 +25,7 @@ export function useTaskFilters() {
     statusFilter, 
     setStatusFilter,
     
-    // List filter
-    listFilter, 
-    setListFilter,
-    
-    // Tag filter (for future implementation)
+    // Tag filter
     tagFilter, 
     setTagFilter,
     

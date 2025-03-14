@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Check, ChevronDown, ChevronRight } from "lucide-react"
+import { Check, ChevronDown, ChevronRight, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
-import useTaskLists from "@/hooks/useTaskLists"
 import useTaskFilters from "@/hooks/useTaskFilters"
+import useProjects from "@/hooks/useProjects"
+import useProjectTags from "@/hooks/useProjectTags"
 
 interface TaskListFiltersProps {
     onClose?: () => void
@@ -13,16 +14,17 @@ interface TaskListFiltersProps {
 export function TaskListFilters({ onClose }: TaskListFiltersProps) {
     const { 
         statusFilter, setStatusFilter,
-        listFilter, setListFilter,
         resetFilters,
         activeFilterCount
     } = useTaskFilters();
     
-    const { taskLists } = useTaskLists();
+    const { projectFilter, setProjectFilter } = useProjectTags();
+    
+    const { data: projects = [] } = useProjects();
     
     // State for section collapse - default to collapsed
     const [statusSectionCollapsed, setStatusSectionCollapsed] = useState(true);
-    const [listsSectionCollapsed, setListsSectionCollapsed] = useState(true);
+    const [projectsSectionCollapsed, setProjectsSectionCollapsed] = useState(true);
     
     // Handle status filter selection
     const handleStatusSelect = (status: 'all' | 'completed' | 'incomplete') => {
@@ -31,13 +33,13 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
         setStatusFilter(status);
     };
     
-    // Handle list filter selection
-    const handleListSelect = (listId: string | null) => {
-        console.log("Setting list filter to:", listId);
-        console.log("Previous list filter was:", listFilter);
-        const newListFilter = listFilter === listId ? null : listId;
-        console.log("New list filter will be:", newListFilter);
-        setListFilter(newListFilter);
+    // Handle project filter selection
+    const handleProjectSelect = (projectId: string | null) => {
+        console.log("Setting project filter to:", projectId);
+        console.log("Previous project filter was:", projectFilter);
+        const newProjectFilter = projectFilter === projectId ? null : projectId;
+        console.log("New project filter will be:", newProjectFilter);
+        setProjectFilter(newProjectFilter);
     };
     
     return (
@@ -88,40 +90,41 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
                 </div>
             )}
             
-            {/* Lists filter section - collapsible */}
+            {/* Projects filter section - collapsible */}
             <div 
                 className="px-4 py-2 text-sm flex items-center justify-between cursor-pointer"
-                onClick={() => setListsSectionCollapsed(!listsSectionCollapsed)}
+                onClick={() => setProjectsSectionCollapsed(!projectsSectionCollapsed)}
             >
-                <span>My Lists</span>
-                {listsSectionCollapsed ? 
+                <span>Projects</span>
+                {projectsSectionCollapsed ? 
                     <ChevronRight className="h-4 w-4" /> : 
                     <ChevronDown className="h-4 w-4" />
                 }
             </div>
-            {!listsSectionCollapsed && (
+            {!projectsSectionCollapsed && (
                 <div className="px-2 py-1">
-                    {taskLists.map(list => (
+                    {projects.map(project => (
                         <button
-                            key={list.id}
+                            key={project.id}
                             className={cn(
                                 "w-full text-left py-1.5 px-2 rounded flex items-center justify-between text-sm",
-                                listFilter === list.id ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
+                                projectFilter === project.id ? "bg-primary/10 text-primary" : "hover:bg-gray-100"
                             )}
-                            onClick={() => handleListSelect(list.id)}
+                            onClick={() => handleProjectSelect(project.id)}
                         >
                             <div className="flex items-center">
                                 <span 
                                     className="w-2 h-2 rounded-full mr-2" 
-                                    style={{ backgroundColor: list.color }}
+                                    style={{ backgroundColor: project.color }}
                                 ></span>
-                                <span>{list.name}</span>
+                                <span>{project.name}</span>
                             </div>
-                            {listFilter === list.id && <Check className="h-4 w-4" />}
+                            {projectFilter === project.id && <Check className="h-4 w-4" />}
                         </button>
                     ))}
                 </div>
             )}
+            
             
             {/* Reset filters button */}
             {activeFilterCount > 0 && (

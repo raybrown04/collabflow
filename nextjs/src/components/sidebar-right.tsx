@@ -21,6 +21,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Sidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EventsList } from "./events-list";
 import { EventForm, EventData } from "./EventForm";
 import { useCalendarEvents, useUpdateEvent } from "@/hooks/useCalendarEvents";
@@ -194,8 +195,9 @@ export function SidebarRight() {
         setShowEventForm(true);
     }, []);
 
+    // No longer need to check for browser environment since DndProvider is now at the AppLayoutWithCalendar level
     return (
-        <DndProvider backend={HTML5Backend}>
+        <>
             <Sidebar
                 side="right"
                 className="border-l"
@@ -380,28 +382,29 @@ export function SidebarRight() {
                     </div>
                 </div>
             </Sidebar>
-
-            {/* Event Form Dialog */}
-            {showEventForm && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-                    onClick={(e) => {
-                        // Close when clicking the overlay
-                        if (e.target === e.currentTarget) {
-                            setShowEventForm(false);
-                        }
-                    }}
-                >
-                    <div className="bg-background rounded-lg shadow-lg border border-border w-full max-w-md">
-                        <EventForm
-                            selectedDate={selectedDate}
-                            onEventAdded={handleEventSubmit}
-                            onCancel={() => setShowEventForm(false)}
-                            alwaysShowForm={true}
-                        />
-                    </div>
-                </div>
-            )}
-        </DndProvider>
+            
+            {/* Event Form Dialog - Using proper Dialog component */}
+            <Dialog 
+                open={showEventForm} 
+                onOpenChange={(open: boolean) => {
+                    // Only update state if it's different to avoid infinite loop
+                    if (open !== showEventForm) {
+                        setShowEventForm(open);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add Event</DialogTitle>
+                    </DialogHeader>
+                    <EventForm
+                        selectedDate={selectedDate}
+                        onEventAdded={handleEventSubmit}
+                        onCancel={() => setShowEventForm(false)}
+                        alwaysShowForm={true}
+                    />
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

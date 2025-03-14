@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
@@ -44,9 +44,17 @@ export function RecurringDialog({ isOpen, onClose, onSetRecurring }: RecurringDi
         onClose()
     }
     
+    // Memoize the onOpenChange handler to prevent infinite loops
+    const handleOpenChange = useCallback((open: boolean) => {
+        if (!open) onClose();
+    }, [onClose]);
+    
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[400px] bg-white text-black">
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={handleOpenChange}
+        >
+            <DialogContent className="sm:max-w-[400px] bg-background text-foreground">
                 <DialogHeader>
                     <DialogTitle>Set Recurring</DialogTitle>
                 </DialogHeader>

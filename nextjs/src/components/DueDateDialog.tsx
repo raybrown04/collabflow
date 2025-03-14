@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -196,8 +196,16 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
         onClose();
     };
     
+    // Memoize the onOpenChange handler to prevent infinite loops
+    const handleOpenChange = useCallback((open: boolean) => {
+        if (!open) onClose();
+    }, [onClose]);
+    
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={handleOpenChange}
+        >
             <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Due Date</DialogTitle>

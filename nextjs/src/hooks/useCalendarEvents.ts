@@ -18,6 +18,8 @@ import { Database } from "@/lib/database.types";
 import { supabase } from "@/lib/auth";
 import { RRule, RRuleSet, rrulestr } from "rrule";
 
+import { Project } from "@/hooks/useProjects";
+
 export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row'] & {
     end_date?: string | null;
     is_all_day?: boolean | null;
@@ -27,6 +29,7 @@ export type CalendarEvent = Database['public']['Tables']['calendar_events']['Row
     is_recurring_instance?: boolean;
     multiDayContinuation?: boolean;
     updated_at?: string | null;
+    projects?: Project[] | null; // Add projects field
 };
 
 // Store test events in memory for development mode
@@ -239,6 +242,46 @@ function parseWeekday(weekday: string): any {
 // Generate test events for development
 function generateTestEvents(): CalendarEvent[] {
     const userId = '12345'; // Mock user ID
+    
+    // Mock projects for development mode
+    const mockProjects = [
+        {
+            id: "proj-1",
+            name: "Personal",
+            description: "Personal tasks and reminders",
+            color: "#3B82F6", // Blue
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        },
+        {
+            id: "proj-2",
+            name: "Work",
+            description: "Work-related tasks and projects",
+            color: "#10B981", // Green
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        },
+        {
+            id: "proj-3",
+            name: "Home Renovation",
+            description: "Tasks related to home renovation project",
+            color: "#F59E0B", // Amber
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        },
+        {
+            id: "proj-4",
+            name: "Vacation Planning",
+            description: "Tasks for upcoming vacation",
+            color: "#EC4899", // Pink
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }
+    ];
 
     return [
         {
@@ -250,11 +293,16 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-01-15T19:00:00.000Z',
             is_all_day: false,
             location: 'Conference Room A',
+            location_coordinates: {
+                lat: 37.7854,
+                lng: -122.4031
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
             invitees: ['john@example.com', 'sarah@example.com'],
-            recurrence_rule: null
+            recurrence_rule: null,
+            projects: [mockProjects[1]] // Work project
         },
         {
             id: '2',
@@ -265,11 +313,16 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-01-20T23:00:00.000Z',
             is_all_day: false,
             location: 'Downtown Restaurant',
+            location_coordinates: {
+                lat: 37.7897,
+                lng: -122.4000
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
             invitees: ['team@example.com'],
-            recurrence_rule: null
+            recurrence_rule: null,
+            projects: [mockProjects[1]] // Work project
         },
         {
             id: '3',
@@ -280,11 +333,13 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-02-27T18:30:00.000Z',
             is_all_day: false,
             location: 'Zoom',
+            location_coordinates: null,
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
             invitees: null,
-            recurrence_rule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR'
+            recurrence_rule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR',
+            projects: [mockProjects[1]] // Work project
         },
         {
             id: '4',
@@ -295,6 +350,10 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-02-27T23:00:00.000Z',
             is_all_day: false,
             location: 'Meeting Room B',
+            location_coordinates: {
+                lat: 37.7834,
+                lng: -122.4071
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
@@ -310,6 +369,7 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: null,
             is_all_day: false,
             location: null,
+            location_coordinates: null,
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
@@ -325,11 +385,16 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-03-01T23:30:00.000Z',
             is_all_day: false,
             location: 'Dental Clinic',
+            location_coordinates: {
+                lat: 37.7924,
+                lng: -122.4102
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
             invitees: null,
-            recurrence_rule: null
+            recurrence_rule: null,
+            projects: [mockProjects[0]] // Personal project
         },
         {
             id: '7',
@@ -340,6 +405,10 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-03-10T19:00:00.000Z',
             is_all_day: false,
             location: 'Manager\'s Office',
+            location_coordinates: {
+                lat: 37.7874,
+                lng: -122.4159
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
@@ -355,6 +424,10 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-03-17T23:00:00.000Z',
             is_all_day: true,
             location: 'Convention Center',
+            location_coordinates: {
+                lat: 37.7836,
+                lng: -122.4089
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
@@ -370,6 +443,7 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: null,
             is_all_day: true,
             location: null,
+            location_coordinates: null,
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
@@ -385,11 +459,16 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-04-12T07:00:00.000Z',
             is_all_day: true,
             location: 'Beach Resort',
+            location_coordinates: {
+                lat: 20.7984,
+                lng: -156.3319
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,
             invitees: null,
-            recurrence_rule: null
+            recurrence_rule: null,
+            projects: [mockProjects[3]] // Vacation Planning project
         },
         {
             id: '11',
@@ -400,6 +479,10 @@ function generateTestEvents(): CalendarEvent[] {
             end_date: '2025-04-12T19:00:00.000Z',
             is_all_day: false,
             location: 'Training Room',
+            location_coordinates: {
+                lat: 37.7894,
+                lng: -122.3977
+            },
             user_id: userId,
             created_at: '2025-01-01T00:00:00.000Z',
             updated_at: null,

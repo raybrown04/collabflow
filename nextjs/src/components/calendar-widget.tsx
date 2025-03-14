@@ -25,6 +25,14 @@ const typeColors = {
     reminder: 'bg-amber-500'
 }
 
+// Project colors for development mode
+const projectColors = {
+    'proj-1': '#3B82F6', // Personal (Blue)
+    'proj-2': '#10B981', // Work (Green)
+    'proj-3': '#F59E0B', // Home Renovation (Amber)
+    'proj-4': '#EC4899'  // Vacation Planning (Pink)
+}
+
 export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop }: CalendarWidgetProps) {
     const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null)
     const updateEventDateMutation = useUpdateEventDate()
@@ -64,6 +72,7 @@ export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop
                 <div className="text-center">{format(day, "d")}</div>
                 {dayEvents.length > 0 && (
                     <div className="absolute bottom-1 flex gap-0.5">
+                        {/* Event type indicators */}
                         {uniqueTypes.map((type, i) => (
                             <div
                                 key={type}
@@ -73,6 +82,44 @@ export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop
                                 }}
                             />
                         ))}
+                        
+                        {/* Project indicators (for development mode) */}
+                        {dayEvents.some(event => event.title?.includes('dev-1')) && (
+                            <div
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{
+                                    backgroundColor: projectColors['proj-1'],
+                                    transform: 'translateX(10px)'
+                                }}
+                            />
+                        )}
+                        {dayEvents.some(event => event.title?.includes('dev-2') || event.title?.includes('dev-3')) && (
+                            <div
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{
+                                    backgroundColor: projectColors['proj-2'],
+                                    transform: 'translateX(16px)'
+                                }}
+                            />
+                        )}
+                        {dayEvents.some(event => event.title?.includes('dev-4')) && (
+                            <div
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{
+                                    backgroundColor: projectColors['proj-3'],
+                                    transform: 'translateX(22px)'
+                                }}
+                            />
+                        )}
+                        {dayEvents.some(event => event.title?.includes('dev-5')) && (
+                            <div
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{
+                                    backgroundColor: projectColors['proj-4'],
+                                    transform: 'translateX(28px)'
+                                }}
+                            />
+                        )}
                     </div>
                 )}
             </DroppableCalendarDay>

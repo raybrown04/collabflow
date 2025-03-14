@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Check, Bell, FileText, Repeat, Trash2, X } from "lucide-react";
 import { useTaskMultiSelect } from "@/lib/context/TaskMultiSelectContext";
 import { cn } from "@/lib/utils";
@@ -208,7 +208,12 @@ export function TaskMultiSelectPopup({ onComplete }: TaskMultiSelectPopupProps) 
       </div>
       
       {/* List selection dialog */}
-      <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+      <Dialog 
+        open={isListDialogOpen} 
+        onOpenChange={useCallback((open: boolean) => {
+          setIsListDialogOpen(open);
+        }, [setIsListDialogOpen])}
+      >
         <DialogContent className="sm:max-w-[400px] bg-white text-black">
           <DialogHeader>
             <DialogTitle>Move to List</DialogTitle>
@@ -233,7 +238,12 @@ export function TaskMultiSelectPopup({ onComplete }: TaskMultiSelectPopupProps) 
       </Dialog>
       
       {/* Recurring selection dialog */}
-      <Dialog open={isRecurringDialogOpen} onOpenChange={setIsRecurringDialogOpen}>
+      <Dialog 
+        open={isRecurringDialogOpen} 
+        onOpenChange={useCallback((open: boolean) => {
+          setIsRecurringDialogOpen(open);
+        }, [setIsRecurringDialogOpen])}
+      >
         <DialogContent className="sm:max-w-[400px] bg-white text-black">
           <DialogHeader>
             <DialogTitle>Set Recurring</DialogTitle>

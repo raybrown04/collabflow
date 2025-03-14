@@ -6,8 +6,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface TaskFiltersContextType {
   statusFilter: 'all' | 'completed' | 'incomplete';
   setStatusFilter: (status: 'all' | 'completed' | 'incomplete') => void;
-  listFilter: string | null;
-  setListFilter: (list: string | null) => void;
   tagFilter: string | null;
   setTagFilter: (tag: string | null) => void;
   resetFilters: () => void;
@@ -22,7 +20,6 @@ const TaskFiltersContext = createContext<TaskFiltersContextType | undefined>(und
 export function TaskFiltersProvider({ children }: { children: ReactNode }) {
   // Filter states
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'incomplete'>('all');
-  const [listFilter, setListFilter] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   
   // Track if any filters are active
@@ -34,11 +31,6 @@ export function TaskFiltersProvider({ children }: { children: ReactNode }) {
     setStatusFilter(status);
   };
   
-  const setListFilterWithLog = (list: string | null) => {
-    console.log("TaskFiltersContext: Setting list filter to:", list);
-    setListFilter(list);
-  };
-  
   const setTagFilterWithLog = (tag: string | null) => {
     console.log("TaskFiltersContext: Setting tag filter to:", tag);
     setTagFilter(tag);
@@ -46,34 +38,30 @@ export function TaskFiltersProvider({ children }: { children: ReactNode }) {
   
   // Update active filter count when filters change
   useEffect(() => {
-    console.log("TaskFiltersContext: Filters changed - status:", statusFilter, "list:", listFilter, "tag:", tagFilter);
+    console.log("TaskFiltersContext: Filters changed - status:", statusFilter, "tag:", tagFilter);
     let count = 0;
     if (statusFilter !== 'all') count++;
-    if (listFilter !== null) count++;
     if (tagFilter !== null) count++;
     console.log("TaskFiltersContext: New active filter count:", count);
     setActiveFilterCount(count);
-  }, [statusFilter, listFilter, tagFilter]);
+  }, [statusFilter, tagFilter]);
   
   // Reset all filters
   const resetFilters = () => {
     console.log("TaskFiltersContext: Resetting all filters");
     setStatusFilter('all');
-    setListFilter(null);
     setTagFilter(null);
   };
   
   // Helper to check if any filters are active
   const hasActiveFilters = () => {
-    return statusFilter !== 'all' || listFilter !== null || tagFilter !== null;
+    return statusFilter !== 'all' || tagFilter !== null;
   };
   
   // Create the context value
   const contextValue: TaskFiltersContextType = {
     statusFilter,
     setStatusFilter: setStatusFilterWithLog,
-    listFilter,
-    setListFilter: setListFilterWithLog,
     tagFilter,
     setTagFilter: setTagFilterWithLog,
     resetFilters,

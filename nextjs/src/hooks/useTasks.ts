@@ -174,7 +174,7 @@ function expandRecurringTasks(tasks: Task[]): Task[] {
 async function fetchTasks(
     filter: 'today' | 'upcoming' | 'all', 
     statusFilter: 'all' | 'completed' | 'incomplete' = 'all',
-    listFilter: string | null = null,
+    projectFilter: string | null = null,
     isAdmin: boolean = false
 ): Promise<Task[]> {
     if (isDevelopment) {
@@ -213,9 +213,19 @@ async function fetchTasks(
                 return false;
             }
 
-            // Then apply list filter
-            if (listFilter && task.list_id !== listFilter) {
-                return false;
+            // Then apply project filter (for development mode)
+            if (projectFilter) {
+                // In development mode, we'll use a simple pattern matching approach
+                // In production, this would use the project_tags table
+                if (projectFilter === 'proj-1' && !task.id.includes('dev-1')) {
+                    return false;
+                } else if (projectFilter === 'proj-2' && !(task.id.includes('dev-2') || task.id.includes('dev-3'))) {
+                    return false;
+                } else if (projectFilter === 'proj-3' && !task.id.includes('dev-4')) {
+                    return false;
+                } else if (projectFilter === 'proj-4' && !task.id.includes('dev-5')) {
+                    return false;
+                }
             }
 
             return true;
@@ -257,7 +267,7 @@ async function fetchTasks(
             console.error("Error fetching tasks:", error);
             // Return mock data if there's an error with the database
             console.log("Falling back to mock data due to database error");
-            return fetchTasks(filter, statusFilter, listFilter, isAdmin);
+            return fetchTasks(filter, statusFilter, projectFilter, isAdmin);
         }
 
         // Map todo_list data to Task interface format
@@ -276,7 +286,7 @@ async function fetchTasks(
         console.error("Exception in fetchTasks:", error);
         // Return mock data if there's an exception
         console.log("Falling back to mock data due to exception");
-        return fetchTasks(filter, statusFilter, listFilter, isAdmin);
+        return fetchTasks(filter, statusFilter, projectFilter, isAdmin);
     }
 }
 
@@ -487,15 +497,15 @@ async function deleteTask(id: string): Promise<void> {
 export function useTasks(
     filter: 'today' | 'upcoming' | 'all' = 'all', 
     statusFilter: 'all' | 'completed' | 'incomplete' = 'all',
-    listFilter: string | null = null,
+    projectFilter: string | null = null,
     limit: number = 10
 ) {
     const queryClient = useQueryClient();
     
     // Use React Query to fetch tasks
     const { data, isLoading, error, refetch } = useQuery({
-        queryKey: ['tasks', filter, statusFilter, listFilter],
-        queryFn: () => fetchTasks(filter, statusFilter, listFilter),
+        queryKey: ['tasks', filter, statusFilter, projectFilter],
+        queryFn: () => fetchTasks(filter, statusFilter, projectFilter),
         staleTime: 1000 * 60 * 5, // 5 minutes
         refetchOnWindowFocus: true,
         refetchOnMount: true,

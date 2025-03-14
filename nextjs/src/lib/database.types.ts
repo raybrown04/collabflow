@@ -9,6 +9,75 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      event_projects: {
+        Row: {
+          id: string
+          event_id: string
+          project_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          project_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          project_id?: string
+          created_at?: string
+        }
+      }
+      projects: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          color: string
+          user_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          color?: string
+          user_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          color?: string
+          user_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      project_tags: {
+        Row: {
+          id: string
+          task_id: string
+          project_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          project_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          project_id?: string
+          created_at?: string
+        }
+      }
       user_settings: {
         Row: {
           id: string
@@ -68,6 +137,10 @@ export interface Database {
           end_date: string | null
           is_all_day: boolean | null
           location: string | null
+          location_coordinates: {
+            lat: number
+            lng: number
+          } | null
           invitees: string[] | null
           recurrence_rule: string | null
           updated_at: string | null
@@ -83,6 +156,10 @@ export interface Database {
           end_date?: string | null
           is_all_day?: boolean | null
           location?: string | null
+          location_coordinates?: {
+            lat: number
+            lng: number
+          } | null
           invitees?: string[] | null
           recurrence_rule?: string | null
           updated_at?: string | null
@@ -98,6 +175,10 @@ export interface Database {
           end_date?: string | null
           is_all_day?: boolean | null
           location?: string | null
+          location_coordinates?: {
+            lat: number
+            lng: number
+          } | null
           invitees?: string[] | null
           recurrence_rule?: string | null
           updated_at?: string | null
@@ -183,6 +264,50 @@ export interface Database {
         Returns: {
           id: string
           email: string
+        }[]
+      }
+      get_task_projects: {
+        Args: {
+          p_task_id: string
+        }
+        Returns: {
+          id: string
+          name: string
+          description: string | null
+          color: string
+          user_id: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_project_tasks: {
+        Args: {
+          p_project_id: string
+        }
+        Returns: {
+          task_id: string
+        }[]
+      }
+      get_event_projects: {
+        Args: {
+          p_event_id: string
+        }
+        Returns: {
+          id: string
+          name: string
+          description: string | null
+          color: string
+          user_id: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_project_events: {
+        Args: {
+          p_project_id: string
+        }
+        Returns: {
+          event_id: string
         }[]
       }
     }

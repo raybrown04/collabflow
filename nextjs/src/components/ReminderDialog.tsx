@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useEffect, useCallback } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { format, addMonths, subMonths, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
+import { RecurringDialog } from "./RecurringDialog"
 
 interface CalendarDay {
     date: Date;
@@ -38,6 +39,7 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
     // Time for the reminder
     const [reminderTime, setReminderTime] = useState<string>("09:00");
     const [isReminderRecurring, setIsReminderRecurring] = useState(false);
+    const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
     
     // Generate calendar grid for the current view month
     const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
@@ -189,6 +191,12 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
         }
     };
     
+    // Handle setting recurring
+    const handleSetRecurring = (recurrenceRule: string) => {
+        setIsReminderRecurring(true);
+        setIsRecurringDialogOpen(false);
+    };
+    
     // Handle setting reminder
     const handleSetReminder = () => {
         // Pass the selected date string directly without any conversion
@@ -196,11 +204,22 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
         onClose();
     };
     
+    // Memoize the onOpenChange handler to prevent infinite loops
+    const handleOpenChange = useCallback((open: boolean) => {
+        if (!open) onClose();
+    }, [onClose]);
+    
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={handleOpenChange}
+        >
+            <DialogContent className="sm:max-w-md" aria-describedby="reminder-description">
                 <DialogHeader>
                     <DialogTitle>Reminder</DialogTitle>
+                    <DialogDescription id="reminder-description">
+                        Set a reminder for your event
+                    </DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-6 mt-2">
@@ -212,7 +231,7 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
                                 type="text"
                                 value={format(parseISO(selectedDateStr), "MM.dd.yyyy")}
                                 readOnly
-                                className="text-sm text-foreground"
+                                className="text-sm text-foreground placeholder:text-gray-400"
                                 data-testid="date-display"
                             />
                         </div>
@@ -222,7 +241,8 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
                                 type="time"
                                 value={reminderTime}
                                 onChange={(e) => setReminderTime(e.target.value)}
-                                className="text-sm text-foreground"
+                                className="text-sm text-foreground placeholder:text-gray-400"
+                                required={false}
                             />
                         </div>
                     </div>
@@ -321,7 +341,12 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
                                 type="checkbox"
                                 id="reminder-recurring"
                                 checked={isReminderRecurring}
-                                onChange={(e) => setIsReminderRecurring(e.target.checked)}
+                                onChange={(e) => {
+                                    setIsReminderRecurring(e.target.checked);
+                                    if (e.target.checked) {
+                                        setIsRecurringDialogOpen(true);
+                                    }
+                                }}
                                 className="mr-2 h-4 w-4"
                             />
                             <label htmlFor="reminder-recurring" className="text-sm">
@@ -348,6 +373,12 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
                     </div>
                 </div>
             </DialogContent>
+            
+            <RecurringDialog
+                isOpen={isRecurringDialogOpen}
+                onClose={() => setIsRecurringDialogOpen(false)}
+                onSetRecurring={handleSetRecurring}
+            />
         </Dialog>
     )
 }

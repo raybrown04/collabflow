@@ -39,11 +39,31 @@ const isDevelopment = typeof window !== 'undefined' && window.location.hostname 
 /**
  * Mock function to search with Perplexity in development mode
  */
-async function mockSearchWithPerplexity(query: string): Promise<SearchResult[]> {
+async function mockSearchWithPerplexity(query: string, projectContext?: string): Promise<SearchResult[]> {
     console.log("Development mode: Using mock search results for query:", query)
+    if (projectContext) {
+        console.log("Project context:", projectContext)
+    }
 
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // If we have project context, customize the results
+    if (projectContext) {
+        return [
+            {
+                title: `${projectContext} Project Overview`,
+                content: `Information about the ${projectContext} project, including tasks, deadlines, and team members.`,
+                url: "#project-overview"
+            },
+            {
+                title: `${projectContext} Recent Updates`,
+                content: `The latest updates and changes to the ${projectContext} project, including recently completed tasks and upcoming deliverables.`,
+                url: "#project-updates"
+            },
+            ...mockSearchResults
+        ];
+    }
 
     return mockSearchResults
 }
@@ -51,22 +71,25 @@ async function mockSearchWithPerplexity(query: string): Promise<SearchResult[]> 
 /**
  * Real function to search with Perplexity via MCP server
  */
-async function searchWithPerplexity(query: string): Promise<SearchResult[]> {
+async function searchWithPerplexity(query: string, projectContext?: string): Promise<SearchResult[]> {
     try {
         // This would use the MCP tool in production
         // For now we'll use the mock function in both cases
 
         if (isDevelopment) {
-            return mockSearchWithPerplexity(query)
+            return mockSearchWithPerplexity(query, projectContext)
         }
 
         // In production, this would call the Perplexity API via MCP
         console.log("Searching with Perplexity:", query)
+        if (projectContext) {
+            console.log("With project context:", projectContext)
+        }
 
         // Placeholder for actual MCP call
         /* 
         const result = await window.mcp.perplexity.search({
-          query: query,
+          query: projectContext ? `${query} (in the context of ${projectContext} project)` : query,
           detail_level: "normal"
         })
         
@@ -80,7 +103,7 @@ async function searchWithPerplexity(query: string): Promise<SearchResult[]> {
         */
 
         // For now, return mock results
-        return mockSearchWithPerplexity(query)
+        return mockSearchWithPerplexity(query, projectContext)
     } catch (error) {
         console.error("Error using Perplexity API:", error)
         throw error
@@ -125,6 +148,7 @@ function SearchResultCard({ result }: { result: SearchResult }) {
 interface AIQuickSearchProps {
     placeholder?: string
     expandable?: boolean
+    projectContext?: string
 }
 
 /**
@@ -134,7 +158,8 @@ interface AIQuickSearchProps {
  */
 export function AIQuickSearch({
     placeholder = "Ask anything...",
-    expandable = true
+    expandable = true,
+    projectContext
 }: AIQuickSearchProps) {
     const [expanded, setExpanded] = useState(false)
     const [query, setQuery] = useState("")
@@ -164,8 +189,8 @@ export function AIQuickSearch({
 
         setIsLoading(true)
         try {
-            // Use Perplexity API to search
-            const searchResults = await searchWithPerplexity(query)
+            // Use Perplexity API to search with optional project context
+            const searchResults = await searchWithPerplexity(query, projectContext)
             setResults(searchResults)
         } catch (error) {
             console.error("Search error:", error)
@@ -177,6 +202,11 @@ export function AIQuickSearch({
             setIsLoading(false)
         }
     }
+
+    // Customize placeholder based on project context
+    const effectivePlaceholder = projectContext 
+        ? `Ask about ${projectContext} project...`
+        : placeholder;
 
     return (
         <div
@@ -193,7 +223,7 @@ export function AIQuickSearch({
                     <Search className="h-5 w-5 text-foreground" />
                     <input
                         type="text"
-                        placeholder={placeholder}
+                        placeholder={effectivePlaceholder}
                         className="flex-1 bg-transparent outline-none text-foreground placeholder:text-foreground"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -235,8 +265,16 @@ export function AIQuickSearch({
                     ) : (
                         <div className="flex h-full flex-col items-center justify-center text-center text-foreground">
                             <Search className="mb-2 h-10 w-10 text-foreground" />
-                            <p className="text-foreground">Search for anything using natural language</p>
-                            <p className="text-sm text-foreground">Examples: "Latest AI news", "JavaScript array methods", "Climate change data"</p>
+                            <p className="text-foreground">
+                                {projectContext 
+                                    ? `Search for anything related to the ${projectContext} project` 
+                                    : "Search for anything using natural language"}
+                            </p>
+                            <p className="text-sm text-foreground">
+                                {projectContext 
+                                    ? `Examples: "${projectContext} deadlines", "${projectContext} progress", "${projectContext} team"` 
+                                    : "Examples: \"Latest AI news\", \"JavaScript array methods\", \"Climate change data\""}
+                            </p>
                         </div>
                     )}
                 </div>

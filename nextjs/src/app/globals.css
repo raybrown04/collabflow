@@ -188,7 +188,11 @@
 }
 
 @layer components {
-
+    /* Form input styling with proper dark mode support */
+    .form-input {
+        @apply w-full rounded-md border px-3 py-2 bg-background text-foreground;
+    }
+    
     /* Layout and Alignment Fixes */
     .dashboard-container {
         display: grid;
