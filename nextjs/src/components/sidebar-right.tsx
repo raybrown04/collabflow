@@ -200,7 +200,7 @@ export function SidebarRight() {
         <>
             <Sidebar
                 side="right"
-                className="border-l"
+                className="border-1"
             >
                 <div className="flex flex-col gap-0 p-0 px-1">
                     <div className="h-full flex flex-col">

@@ -8,7 +8,7 @@ import { format, parseISO, isSameDay, addDays } from "date-fns"
 import { useTaskMultiSelect } from "@/lib/context/TaskMultiSelectContext"
 import { toLocalDate } from "@/lib/dates"
 import { useDrag } from "react-dnd"
-import useProjects, { Project } from "@/hooks/useProjects"
+import { useProjects, Project } from "@/hooks/useProjects"
 
 export interface Task {
     id: string

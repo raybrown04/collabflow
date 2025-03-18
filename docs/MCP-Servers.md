@@ -1,6 +1,6 @@
 # MCP Servers
 
-*Last Updated: March 12, 2025*
+*Last Updated: March 14, 2025*
 
 This document provides a comprehensive overview of the Model Context Protocol (MCP) servers used as tools to build the CollabFlow project. These servers are not integrated into the application itself but serve as development tools.
 
@@ -71,53 +71,113 @@ The memory MCP server provides a persistent knowledge graph for storing informat
 - **Entity Management**: Create, update, and delete entities
 - **Relationship Management**: Define relationships between entities
 - **Search Capabilities**: Search for entities and relationships
+- **Database Integration**: Persistent storage in Supabase database
+- **API Integration**: Server-side API routes for client-side components
 
 ### Usage Examples
 
 ```typescript
 // Store information in memory graph
-await use_mcp_tool({
-  server_name: 'memory',
-  tool_name: 'create_entities',
-  arguments: {
-    entities: [
-      {
-        name: "CalendarComponent",
-        entityType: "UIComponent",
-        observations: [
-          "Implemented with react-day-picker",
-          "Supports event indicators",
-          "Bidirectional synchronization with events list"
-        ]
-      }
-    ]
-  }
+await use_mcp_tool("mcp-memory", "create_entities", {
+  entities: [
+    {
+      name: "CalendarComponent",
+      entityType: "UIComponent",
+      observations: [
+        "Implemented with react-day-picker",
+        "Supports event indicators",
+        "Bidirectional synchronization with events list"
+      ]
+    }
+  ]
 });
 
 // Create relationships between entities
-await use_mcp_tool({
-  server_name: 'memory',
-  tool_name: 'create_relations',
-  arguments: {
-    relations: [
-      {
-        from: "CalendarComponent",
-        to: "EventsList",
-        relationType: "synchronizes with"
-      }
-    ]
-  }
+await use_mcp_tool("mcp-memory", "create_relations", {
+  relations: [
+    {
+      from: "CalendarComponent",
+      to: "EventsList",
+      relationType: "synchronizes with"
+    }
+  ]
 });
 
 // Retrieve information from memory graph
-const result = await use_mcp_tool({
-  server_name: 'memory',
-  tool_name: 'search_nodes',
-  arguments: {
-    query: "CalendarComponent"
-  }
+const result = await use_mcp_tool("mcp-memory", "search_nodes", {
+  query: "CalendarComponent"
 });
+
+// Using the useMcpMemory hook (client-side)
+import { useMcpMemory } from "@/hooks/useMcpMemory";
+
+function MyComponent() {
+  const { createEntities, createRelations, isLoading, error } = useMcpMemory();
+  
+  const handleDocumentUpload = async (document) => {
+    // Create document entity in memory graph
+    await createEntities([
+      {
+        name: `Document: ${document.name}`,
+        entityType: "Document",
+        observations: [
+          `Uploaded on ${new Date().toLocaleString()}`,
+          `Size: ${Math.round(document.size / 1024)} KB`,
+          `Type: ${document.type}`
+        ]
+      }
+    ]);
+    
+    // Create relationship to project if applicable
+    if (document.projectId) {
+      await createRelations([
+        {
+          from: `Document: ${document.name}`,
+          to: `Project: ${document.projectName}`,
+          relationType: "belongs_to"
+        }
+      ]);
+    }
+  };
+  
+  return (
+    // Component JSX
+  );
+}
 ```
+
+### Integration with Document Management
+
+The memory MCP server is integrated with the document management system to track documents and their relationships to projects. This integration provides the following benefits:
+
+1. **Document Tracking**: Track document uploads, downloads, and deletions
+2. **Project Associations**: Track document associations with projects
+3. **Version History**: Track document version history
+4. **Audit Trail**: Maintain an audit trail of document operations
+
+#### Implementation Details
+
+1. **Database Schema**:
+   - `mcp_entities` table for storing entities
+   - `mcp_relations` table for storing relationships
+   - Row-level security policies for data protection
+
+2. **API Routes**:
+   - `/api/mcp/memory` route for server-side operations
+   - Supports create_entities, create_relations, add_observations, delete_entities
+
+3. **Client-Side Hooks**:
+   - `useMcpMemory` hook for client-side components
+   - Provides createEntities, createRelations, addObservations, deleteEntities functions
+
+4. **Document Upload Integration**:
+   - Creates document entity on upload
+   - Creates project-document relation if applicable
+   - Adds observations about document metadata
+
+5. **Document Deletion Integration**:
+   - Updates document entity on deletion
+   - Maintains relationship history
 
 ### Best Practices
 
@@ -125,6 +185,8 @@ const result = await use_mcp_tool({
 2. **Retrieve Knowledge**: Before searching external sources, check if the information is already in the memory graph.
 3. **Update Knowledge**: Keep the memory graph up-to-date by updating entities when new information is available.
 4. **Organize Knowledge**: Use entity types and relations to organize knowledge in a structured way.
+5. **Fallback Mechanism**: Implement fallback mechanisms for when the MCP server is not available.
+6. **Error Handling**: Implement proper error handling for MCP operations.
 
 ---
 

@@ -2,7 +2,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createSPASassClient } from '@/lib/supabase/client';
+import { getSupabaseClient, initializeSupabaseClient } from '@/lib/supabase/clientSingleton';
+import { Session } from '@supabase/supabase-js';
 import { useUserSettings } from '@/hooks/useUserSettings';
 
 type User = {
@@ -16,8 +17,10 @@ type Theme = 'light' | 'dark' | 'system';
 interface GlobalContextType {
     loading: boolean;
     user: User | null;
+    session: Session | null; // Add session to context
     theme: Theme;
     setTheme: (theme: Theme) => void;
+    refreshSession: () => Promise<boolean>; // Add refresh function that returns success status
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -25,8 +28,15 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 export function GlobalProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
+    const [session, setSession] = useState<Session | null>(null);
     const [theme, setThemeState] = useState<Theme>('light');
     const { data: userSettings } = useUserSettings();
+
+    // Initialize Supabase client and set up auth listeners
+    useEffect(() => {
+        const cleanup = initializeSupabaseClient();
+        return cleanup;
+    }, []);
 
     // Set theme based on user settings
     useEffect(() => {
@@ -81,36 +91,94 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
         setThemeState(newTheme);
     };
 
-    useEffect(() => {
-        async function loadData() {
-            try {
-                const supabase = await createSPASassClient();
-                const client = supabase.getSupabaseClient();
+    // Add session refresh function with debounce to prevent infinite loops
+    const refreshSession = async () => {
+        // Use a static flag to prevent multiple simultaneous refresh attempts
+        if ((refreshSession as any).isRefreshing) {
+            console.log('Session refresh already in progress, skipping');
+            return false;
+        }
+        
+        try {
+            (refreshSession as any).isRefreshing = true;
+            setLoading(true);
+            
+            console.log('Refreshing session...');
+            const supabase = getSupabaseClient();
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+                console.error('Session refresh error:', error);
+                return false;
+            }
+            
+            if (session) {
+                console.log('Session refresh successful');
+                setSession(session);
+                setUser({
+                    email: session.user.email!,
+                    id: session.user.id,
+                    registered_at: new Date(session.user.created_at || Date.now())
+                });
+                return true;
+            } else {
+                console.log('No session found during refresh');
+                setSession(null);
+                setUser(null);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error refreshing session:', error);
+            return false;
+        } finally {
+            setLoading(false);
+            // Reset the flag after a short delay to allow for potential cleanup
+            setTimeout(() => {
+                (refreshSession as any).isRefreshing = false;
+            }, 500);
+        }
+    };
+    
+    // Initialize the static flag
+    (refreshSession as any).isRefreshing = false;
 
-                // Get user data
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
+    // Load user data and session on mount
+    useEffect(() => {
+        async function loadUserData() {
+            try {
+                const supabase = getSupabaseClient();
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session?.user) {
+                    setSession(session);
                     setUser({
-                        email: user.email!,
-                        id: user.id,
-                        registered_at: new Date(user.created_at)
+                        email: session.user.email!,
+                        id: session.user.id,
+                        registered_at: new Date(session.user.created_at || Date.now())
                     });
                 } else {
-                    throw new Error('User not found');
+                    setSession(null);
+                    setUser(null);
                 }
-
             } catch (error) {
-                console.error('Error loading data:', error);
+                console.error('Error loading user data:', error);
             } finally {
                 setLoading(false);
             }
         }
 
-        loadData();
+        loadUserData();
     }, []);
 
     return (
-        <GlobalContext.Provider value={{ loading, user, theme, setTheme }}>
+        <GlobalContext.Provider value={{ 
+            loading, 
+            user, 
+            session, 
+            theme, 
+            setTheme,
+            refreshSession 
+        }}>
             {children}
         </GlobalContext.Provider>
     );

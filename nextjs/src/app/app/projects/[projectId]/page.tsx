@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import AIQuickSearch from "@/components/AIQuickSearch";
 import TaskList from "@/components/TaskList";
 import { ToastProvider } from "@/components/ui/use-toast";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { Database } from "@/lib/database.types";
 import ProjectHeader from "@/components/ProjectHeader";
@@ -124,7 +124,18 @@ export default async function ProjectPage({ params }: PageProps) {
   }
   
   // Production mode - create Supabase client for server components
-  const supabase = createServerComponentClient<Database>({ cookies });
+  const cookieStore = await cookies();
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => cookieStore.get(name)?.value,
+        set: () => {}, // Server components can't set cookies
+        remove: () => {} // Server components can't remove cookies
+      }
+    }
+  );
   
   try {
     // Fetch the project details

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Check, ChevronDown, ChevronRight, Tag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import useTaskFilters from "@/hooks/useTaskFilters"
-import useProjects from "@/hooks/useProjects"
+import { useProjects } from "@/hooks/useProjects"
 import useProjectTags from "@/hooks/useProjectTags"
 
 interface TaskListFiltersProps {
@@ -20,7 +20,7 @@ export function TaskListFilters({ onClose }: TaskListFiltersProps) {
     
     const { projectFilter, setProjectFilter } = useProjectTags();
     
-    const { data: projects = [] } = useProjects();
+    const { projects = [] } = useProjects();
     
     // State for section collapse - default to collapsed
     const [statusSectionCollapsed, setStatusSectionCollapsed] = useState(true);

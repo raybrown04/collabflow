@@ -1,12 +1,13 @@
 "use client"
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 import { Database } from "@/lib/database.types"
 import { useEffect, useState } from "react"
 import { User } from "@supabase/supabase-js"
+import { getSupabaseClient } from "@/lib/supabase/clientSingleton"
 
-// Create a Supabase client for client components
-export const supabase = createClientComponentClient<Database>()
+// Get Supabase client from singleton implementation
+export const supabase = getSupabaseClient()
 
 // Hook to get the current authenticated user
 export function useAuth() {

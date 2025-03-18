@@ -5,7 +5,7 @@ import { Check, ChevronDown, ChevronRight, Plus, Tag, X, Edit } from "lucide-rea
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import useProjects, { Project } from "@/hooks/useProjects"
+import { useProjects, Project } from "@/hooks/useProjects"
 import useProjectTags from "@/hooks/useProjectTags"
 
 interface ProjectSelectorProps {
@@ -15,7 +15,7 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ taskId, eventId, onProjectsChange }: ProjectSelectorProps) {
-  const { data: allProjects = [] } = useProjects();
+  const { projects: allProjects = [] } = useProjects();
   const { selectedProjects, setSelectedProjects, getTaskProjects } = useProjectTags();
   
   const [isOpen, setIsOpen] = useState(false);

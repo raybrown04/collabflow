@@ -1,6 +1,6 @@
 # Technical Stack
 
-*Last Updated: March 12, 2025*
+*Last Updated: March 14, 2025*
 
 This document provides a comprehensive overview of the CollabFlow technical stack, architecture, and implementation details.
 
@@ -36,11 +36,13 @@ graph TD
     C --> C3[Task Management]
     C --> C4[AI Components]
     C --> C5[RBIIILV Design System]
+    C --> C6[Document Management]
     
     %% Data Management Details
     D --> D1[React Query Hooks]
     D --> D2[Supabase Schema]
     D --> D3[Mock Data]
+    D --> D4[Dropbox Integration]
     
     %% MCP Server Integrations Details
     E --> E1[perplexity-mcp]
@@ -49,9 +51,11 @@ graph TD
     
     %% Style Definitions
     classDef completed fill:#d4edda,stroke:#28a745,color:#155724
+    classDef inprogress fill:#cce5ff,stroke:#0d6efd,color:#004085
     
     %% Apply Styles
     class B1,B2,B3,B4,C1,C2,C3,C5,D1,D2,D3,E1,E2,E3 completed
+    class C6,D4 inprogress
 ```
 
 The CollabFlow architecture follows a modern, component-based approach with clear separation of concerns. The application is built on Next.js with the App Router, using Supabase for backend services and database management.
@@ -182,6 +186,39 @@ graph TD
     
     %% Apply Styles
     class B1,B2,B3,B4,B5,B6,B7 completed
+```
+
+### Document Management Implementation
+
+```mermaid
+graph TD
+    %% Document Management Implementation
+    A[Document Management] --> B[Dropbox Integration]
+    A --> C[Document UI]
+    A --> D[Project Integration]
+    
+    %% Dropbox Integration
+    B --> B1[OAuth Authentication]
+    B --> B2[Token Management]
+    B --> B3[File Operations]
+    
+    %% Document UI
+    C --> C1[Document Browser]
+    C --> C2[Upload/Download Interface]
+    C --> C3[Project Filter]
+    
+    %% Project Integration
+    D --> D1[Project-specific Views]
+    D --> D2[Permission Mapping]
+    
+    %% Style Definitions
+    classDef completed fill:#d4edda,stroke:#28a745,color:#155724
+    classDef inprogress fill:#cce5ff,stroke:#0d6efd,color:#004085
+    classDef planned fill:#f8f9fa,stroke:#6c757d,color:#6c757d
+    
+    %% Apply Styles
+    class B1,B2,C1,C3,D1 completed
+    class B3,C2,D2 inprogress
 ```
 
 ### Component Development Guidelines
@@ -336,12 +373,114 @@ export function useTasks() {
 }
 ```
 
+### Document Management Hooks
+
+The project implements custom hooks for document management:
+
+```typescript
+// useDocuments hook for document CRUD operations
+export function useDocuments({ projectId, searchQuery } = {}) {
+  const supabase = createClientComponentClient<Database>();
+  
+  return useQuery({
+    queryKey: ['documents', { projectId, searchQuery }],
+    queryFn: async () => {
+      // Project-specific documents
+      if (projectId) {
+        const { data, error } = await supabase.rpc('get_documents_by_project', {
+          project_id: projectId
+        });
+        
+        if (error) throw error;
+        return data;
+      }
+      
+      // All user's documents with optional search
+      let query = supabase
+        .from('documents')
+        .select('*');
+        
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`);
+      }
+      
+      const { data, error } = await query.order('updated_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// useDropboxAuth hook for Dropbox authentication
+export function useDropboxAuth() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // OAuth flow handling, token management, and file operations
+  // with development mode support via mock data
+  
+  return {
+    isAuthenticated,
+    getAuthUrl,
+    handleCallback,
+    disconnect,
+    listFiles,
+  };
+}
+```
+
 ### State Management
 
 - **React Context**: Used for global state management
 - **Local State**: Component-specific state using React's useState
 - **Server State**: Managed through React Query
 - **Form State**: Handled with React Hook Form
+
+### Document Database Schema
+
+The document management system uses the following tables:
+
+```sql
+-- Documents table
+create table documents (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  description text,
+  file_path text, -- Path in Supabase Storage
+  dropbox_path text, -- Path in Dropbox
+  size int,
+  mime_type text,
+  is_synced boolean default false,
+  last_synced timestamptz,
+  external_url text, -- URL for accessing in Dropbox
+  thumbnail_url text, -- URL for thumbnail preview
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  user_id uuid references auth.users not null
+);
+
+-- Document-project associations
+create table document_projects (
+  id uuid default gen_random_uuid() primary key,
+  document_id uuid references documents not null,
+  project_id uuid references projects not null,
+  created_at timestamptz default now(),
+  user_id uuid references auth.users not null,
+  unique(document_id, project_id)
+);
+
+-- Dropbox authentication tokens
+create table dropbox_auth (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null unique,
+  access_token text, -- Encrypted in vault
+  refresh_token text, -- Encrypted in vault
+  account_id text,
+  expires_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
 
 ---
 

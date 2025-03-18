@@ -3,7 +3,7 @@
 
 # Configuration
 $PROJECT_ID = "sasstemplate"
-$PROJECT_REF = "your-project-ref"  # Replace with your actual project reference
+$PROJECT_REF = "ttbdbkhvgistwrhculrf"  # Project reference from NEXT_PUBLIC_SUPABASE_URL
 
 # Check if Supabase CLI is installed
 try {
