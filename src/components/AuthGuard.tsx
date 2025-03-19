@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useGlobal } from "@/lib/context/GlobalContext";
 
@@ -8,32 +8,12 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-// Check if we're in development mode
-const isDevelopment = process.env.NODE_ENV === 'development';
-
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading, refreshSession } = useGlobal();
   const router = useRouter();
   const pathname = usePathname();
-  const [bypassAuth, setBypassAuth] = useState(false);
-
-  // Check for development mode bypass
-  useEffect(() => {
-    if (isDevelopment) {
-      const mockLoggedIn = localStorage.getItem('mockLoggedIn') === 'true';
-      if (mockLoggedIn) {
-        console.log('Development mode: Bypassing authentication');
-        setBypassAuth(true);
-      }
-    }
-  }, []);
 
   useEffect(() => {
-    // Skip auth check if we're bypassing auth in development mode
-    if (isDevelopment && bypassAuth) {
-      return;
-    }
-
     // Add a flag to prevent multiple redirects
     let isRedirecting = false;
     
@@ -71,10 +51,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return () => {
       isRedirecting = false;
     };
-  }, [user, loading, refreshSession, router, pathname, bypassAuth]);
+  }, [user, loading, refreshSession, router, pathname]);
 
-  // Show nothing while loading or redirecting, unless we're bypassing auth
-  if ((loading || (!user && !loading)) && !(isDevelopment && bypassAuth)) {
+  // Show loading indicator while loading
+  if (loading || (!user && !loading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -82,6 +62,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  // If we have a user or we're bypassing auth, render the children
+  // If we have a user, render the children
   return <>{children}</>;
 }

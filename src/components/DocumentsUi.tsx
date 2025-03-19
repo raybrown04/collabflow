@@ -8,7 +8,6 @@ import { useGlobal } from "@/lib/context/GlobalContext";
 import { useProjects } from "@/hooks/useProjects";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
   Folder, 
@@ -16,8 +15,6 @@ import {
   DownloadCloud, 
   Upload, 
   RefreshCw, 
-  LinkIcon, 
-  Trash2, 
   Star, 
   Users, 
   ChevronDown,
@@ -38,15 +35,9 @@ import {
   DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 import { DocumentVersionHistory } from "@/components/DocumentVersionHistory";
-
-// Interface for Dropbox file items
-interface DropboxFile {
-  id: string;
-  name: string;
-  ".tag": "file" | "folder";
-  path_lower?: string;
-  client_modified?: string;
-}
+import { DocumentsGridView } from "@/components/DocumentsGridView";
+import { DocumentsListView } from "@/components/DocumentsListView";
+import { DropboxFile, Document } from "@/types/document";
 
 interface DocumentsUiProps {
   projectId?: string;
@@ -628,323 +619,35 @@ export function DocumentsUi({ projectId }: DocumentsUiProps) {
         )}
       </div>
       
-      {/* Documents Display Section */}
-      {isLoadingDropboxFiles ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array(6).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-36 w-full" />
-          ))}
-        </div>
-      ) : viewMode === "list" ? (
-        // List View
-        <div className="flex flex-col space-y-2">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-100 rounded-md text-sm font-medium">
-            <div className="col-span-5">Name</div>
-            <div className="col-span-2">Owner</div>
-            <div className="col-span-2">Modified</div>
-            <div className="col-span-2">Projects</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          
-          {/* Folders */}
-          {dropboxFiles
-            .filter(item => item[".tag"] === "folder")
-            .map((folder, index) => (
-              <div 
-                key={`folder-${index}`}
-                className="grid grid-cols-12 gap-4 px-4 py-3 border-b hover:bg-gray-50 cursor-pointer items-center"
-                onClick={() => navigateToFolder(folder)}
-              >
-                <div className="col-span-5 flex items-center">
-                  <Folder className="h-5 w-5 mr-2 text-blue-500" />
-                  <span className="truncate">{folder.name}</span>
-                </div>
-                <div className="col-span-2 text-sm text-muted-foreground">Only you</div>
-                <div className="col-span-2 text-sm text-muted-foreground">--</div>
-                <div className="col-span-2"></div>
-                <div className="col-span-1 flex justify-end"></div>
-              </div>
-            ))}
-          
-          {/* Files */}
-          {dropboxFiles
-            .filter(item => item[".tag"] === "file")
-            .filter(item => !showFavoritesOnly || favorites.has(item.id))
-            .map((file, index) => (
-              <div 
-                key={`file-${index}`}
-                className="grid grid-cols-12 gap-4 px-4 py-3 border-b hover:bg-gray-50 items-center"
-              >
-                <div className="col-span-5 flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="truncate">{file.name}</span>
-                </div>
-                <div className="col-span-2 text-sm text-muted-foreground">Only you</div>
-                <div className="col-span-2 text-sm text-muted-foreground">
-                  {file.client_modified ? new Date(file.client_modified).toLocaleDateString() : '--'}
-                </div>
-                <div className="col-span-2"></div>
-                <div className="col-span-1 flex justify-end">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`h-6 w-6 ${favorites.has(file.id) ? 'text-yellow-400' : 'text-muted-foreground hover:text-yellow-400'}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(file.id);
-                    }}
-                  >
-                    <Star className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
-          {/* Local Documents */}
-          {documents
-            .filter(doc => !showFavoritesOnly || favorites.has(doc.id))
-            .filter(doc => !activeProjectFilter || doc.projects?.some(p => p.id === activeProjectFilter))
-            .map((doc, index) => (
-              <div 
-                key={`doc-${index}`}
-                className="grid grid-cols-12 gap-4 px-4 py-3 border-b hover:bg-gray-50 items-center"
-              >
-                <div className="col-span-5 flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                  <div>
-                    <div className="truncate">{doc.name}</div>
-                    {doc.description && (
-                      <div className="text-xs text-muted-foreground truncate">{doc.description}</div>
-                    )}
-                  </div>
-                </div>
-                <div className="col-span-2 text-sm text-muted-foreground">Only you</div>
-                <div className="col-span-2 text-sm text-muted-foreground">
-                  {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : '--'}
-                </div>
-                <div className="col-span-2">
-                  {doc.projects && doc.projects.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {doc.projects.map(project => (
-                        <Badge 
-                          key={project.id} 
-                          className="text-xs" 
-                          style={{ backgroundColor: project.color, color: 'white' }}
-                        >
-                          {project.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="col-span-1 flex justify-end">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`h-6 w-6 ${favorites.has(doc.id) ? 'text-yellow-400' : 'text-muted-foreground hover:text-yellow-400'}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(doc.id);
-                    }}
-                  >
-                    <Star className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
-          {/* Empty state */}
-          {dropboxFiles.length === 0 && documents.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">No documents found in this location</p>
-              <div className="mt-4">
-                <Button onClick={() => {
-                  const fileInput = document.createElement('input');
-                  fileInput.type = 'file';
-                  fileInput.onchange = async (e) => {
-                    const target = e.target as HTMLInputElement;
-                    if (target.files && target.files.length > 0) {
-                      try {
-                        await uploadFile(target.files[0], currentPath);
-                        toast({
-                          title: "File Uploaded",
-                          description: `File "${target.files[0].name}" has been uploaded successfully`,
-                        });
-                        fetchDropboxFiles(currentPath);
-                      } catch (error) {
-                        console.error("Error uploading file:", error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to upload file",
-                          variant: "destructive",
-                        });
-                      }
-                    }
-                  };
-                  fileInput.click();
-                }}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Documents Display Section - now using extracted components */}
+      {viewMode === "list" ? (
+        <DocumentsListView
+          dropboxFiles={dropboxFiles}
+          documents={documents}
+          favorites={favorites}
+          isLoadingDropboxFiles={isLoadingDropboxFiles}
+          showFavoritesOnly={showFavoritesOnly}
+          activeProjectFilter={activeProjectFilter}
+          currentPath={currentPath}
+          navigateToFolder={navigateToFolder}
+          toggleFavorite={toggleFavorite}
+          uploadFile={uploadFile}
+          createFolder={createFolder}
+        />
       ) : (
-        // Grid View
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Folders */}
-          {dropboxFiles
-            .filter(item => item[".tag"] === "folder")
-            .map((folder, index) => (
-              <Card 
-                key={`folder-${index}`} 
-                className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" 
-                onClick={() => navigateToFolder(folder)}
-              >
-                <CardHeader className="p-4 pb-2 bg-blue-50">
-                  <CardTitle className="text-base flex items-center">
-                    <Folder className="h-5 w-5 mr-2 text-blue-500" />
-                    {folder.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <p className="text-xs text-muted-foreground mt-2">Folder</p>
-                </CardContent>
-              </Card>
-            ))}
-          
-          {/* Files */}
-          {dropboxFiles
-            .filter(item => item[".tag"] === "file")
-            .filter(item => !showFavoritesOnly || favorites.has(item.id))
-            .map((file, index) => (
-              <Card key={`file-${index}`} className="overflow-hidden">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base flex items-center">
-                    <FileText className="h-4 w-4 mr-2" />
-                    {file.name}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className={`h-6 w-6 ml-auto ${favorites.has(file.id) ? 'text-yellow-400' : 'text-muted-foreground hover:text-yellow-400'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(file.id);
-                      }}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 pb-2">
-                  <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>Only you</span>
-                    </div>
-                    <div>
-                      {file.client_modified ? new Date(file.client_modified).toLocaleDateString() : '--'}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            
-          {/* Local Documents */}
-          {documents
-            .filter(doc => !showFavoritesOnly || favorites.has(doc.id))
-            .filter(doc => !activeProjectFilter || doc.projects?.some(p => p.id === activeProjectFilter))
-            .map((doc, index) => (
-              <Card key={`doc-${index}`} className="overflow-hidden">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base flex items-center">
-                    <FileText className="h-4 w-4 mr-2" />
-                    {doc.name}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className={`h-6 w-6 ml-auto ${favorites.has(doc.id) ? 'text-yellow-400' : 'text-muted-foreground hover:text-yellow-400'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(doc.id);
-                      }}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 pb-2">
-                  {doc.description && (
-                    <CardDescription className="mt-1">{doc.description}</CardDescription>
-                  )}
-                  
-                  <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>Only you</span>
-                    </div>
-                    <div>
-                      {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : '--'}
-                    </div>
-                  </div>
-                  
-                  {/* Project tags */}
-                  {doc.projects && doc.projects.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {doc.projects.map(project => (
-                        <Badge 
-                          key={project.id} 
-                          className="text-xs" 
-                          style={{ backgroundColor: project.color, color: 'white' }}
-                        >
-                          {project.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-            
-          {/* Empty state */}
-          {dropboxFiles.length === 0 && documents.length === 0 && (
-            <div className="col-span-3 py-12 text-center">
-              <p className="text-muted-foreground">No documents found in this location</p>
-              <div className="mt-4">
-                <Button onClick={() => {
-                  const fileInput = document.createElement('input');
-                  fileInput.type = 'file';
-                  fileInput.onchange = async (e) => {
-                    const target = e.target as HTMLInputElement;
-                    if (target.files && target.files.length > 0) {
-                      try {
-                        await uploadFile(target.files[0], currentPath);
-                        toast({
-                          title: "File Uploaded",
-                          description: `File "${target.files[0].name}" has been uploaded successfully`,
-                        });
-                        fetchDropboxFiles(currentPath);
-                      } catch (error) {
-                        console.error("Error uploading file:", error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to upload file",
-                          variant: "destructive",
-                        });
-                      }
-                    }
-                  };
-                  fileInput.click();
-                }}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+        <DocumentsGridView
+          dropboxFiles={dropboxFiles}
+          documents={documents}
+          favorites={favorites}
+          isLoadingDropboxFiles={isLoadingDropboxFiles}
+          showFavoritesOnly={showFavoritesOnly}
+          activeProjectFilter={activeProjectFilter}
+          currentPath={currentPath}
+          navigateToFolder={navigateToFolder}
+          toggleFavorite={toggleFavorite}
+          uploadFile={uploadFile}
+          createFolder={createFolder}
+        />
       )}
     </div>
   );

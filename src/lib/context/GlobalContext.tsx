@@ -93,6 +93,46 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
 
     // Add session refresh function with debounce to prevent infinite loops
     const refreshSession = async () => {
+        // In development mode, always return success and use mock user
+        if (process.env.NODE_ENV === 'development') {
+            // Check local storage for mock authentication setting
+            const mockEnabled = localStorage?.getItem('mockLoggedIn') !== 'false';
+            
+            if (mockEnabled) {
+                console.log('Development mode: Simulating successful session refresh');
+                
+                // Create a consistent mock user for development
+                const mockUser = {
+                    email: 'dev@example.com',
+                    id: 'b9b36d04-59e0-49d7-83ff-46c5186a8cf4', // Match TEST_USER_ID from auth.ts
+                    registered_at: new Date()
+                };
+                
+                // Set mock data
+                setUser(mockUser);
+                setSession({
+                    access_token: 'mock-token',
+                    refresh_token: 'mock-refresh-token',
+                    token_type: 'bearer',
+                    expires_in: 3600,
+                    expires_at: Date.now() + 3600000,
+                    provider_token: null,
+                    provider_refresh_token: null,
+                    user: {
+                        id: mockUser.id,
+                        email: mockUser.email,
+                        app_metadata: {},
+                        user_metadata: { name: 'Dev User' },
+                        aud: 'authenticated',
+                        created_at: mockUser.registered_at.toISOString()
+                    }
+                } as unknown as Session);
+                
+                setLoading(false);
+                return true;
+            }
+        }
+        
         // Use a static flag to prevent multiple simultaneous refresh attempts
         if ((refreshSession as any).isRefreshing) {
             console.log('Session refresh already in progress, skipping');
@@ -146,6 +186,57 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         async function loadUserData() {
             try {
+                // Use mock data in development mode
+                if (process.env.NODE_ENV === 'development') {
+                    // Check if mock auth is enabled (default to true)
+                    const mockEnabled = localStorage?.getItem('mockLoggedIn') !== 'false';
+                    
+                    if (mockEnabled) {
+                        console.log('Development mode: Using mock user session');
+                        
+                        // Create mock session and user
+                        const mockUser = {
+                            email: 'dev@example.com',
+                            id: 'b9b36d04-59e0-49d7-83ff-46c5186a8cf4', // Match TEST_USER_ID from auth.ts
+                            registered_at: new Date()
+                        };
+                        
+                        // Set mock data
+                        setUser(mockUser);
+                        setSession({
+                            access_token: 'mock-token',
+                            refresh_token: 'mock-refresh-token',
+                            token_type: 'bearer',
+                            expires_in: 3600,
+                            expires_at: Date.now() + 3600000,
+                            provider_token: null,
+                            provider_refresh_token: null,
+                            user: {
+                                id: mockUser.id,
+                                email: mockUser.email,
+                                app_metadata: {},
+                                user_metadata: { name: 'Dev User' },
+                                aud: 'authenticated',
+                                created_at: mockUser.registered_at.toISOString()
+                            }
+                        } as unknown as Session);
+                        
+                        setLoading(false);
+                        
+                        // Add helper to window object if in browser
+                        if (typeof window !== 'undefined') {
+                            (window as any).toggleMockUser = (enabled = true) => {
+                                localStorage.setItem('mockLoggedIn', enabled ? 'true' : 'false');
+                                console.log(`Mock user ${enabled ? 'enabled' : 'disabled'}`);
+                                window.location.reload();
+                            };
+                        }
+                        
+                        return;
+                    }
+                }
+                
+                // Normal flow for production or disabled mock
                 const supabase = getSupabaseClient();
                 const { data: { session } } = await supabase.auth.getSession();
                 

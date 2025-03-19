@@ -46,7 +46,9 @@ export async function updateSession(request: NextRequest) {
         // IMPORTANT: DO NOT REMOVE auth.getSession()
         const { data: { session } } = await supabase.auth.getSession()
         
+        // Only redirect in production mode
         if (!session && request.nextUrl.pathname.startsWith('/app')) {
+            console.log('Redirecting to login page from:', request.nextUrl.pathname)
             const url = request.nextUrl.clone()
             url.pathname = '/auth/login'
             return NextResponse.redirect(url)

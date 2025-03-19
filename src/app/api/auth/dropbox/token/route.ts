@@ -88,8 +88,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the authorization code and code verifier from the request
-    const { code, codeVerifier } = await request.json();
+    // Read request body only once
+    const requestBody = await request.json();
+    const { code, codeVerifier, redirectUri = "" } = requestBody;
 
     if (!code) {
       return NextResponse.json(
@@ -104,10 +105,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Use the same redirect URI as in the auth request
-    // Important: We use just 'localhost' without a port number for Dropbox OAuth
-    const redirectUri = "http://localhost/callback.html";
+    
+    // Use the provided redirectUri or fallback to a default value
+    // This ensures the same redirect URI is used in both the auth request and token exchange
+    const finalRedirectUri = redirectUri || `${request.nextUrl.origin}/callback.html`;
 
     // Exchange the authorization code for tokens with PKCE
     const tokenResponse = await fetch(DROPBOX_TOKEN_URL, {
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: redirectUri,
+        redirect_uri: finalRedirectUri,
         code_verifier: codeVerifier,
       }),
     });

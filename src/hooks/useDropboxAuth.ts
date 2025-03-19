@@ -14,11 +14,11 @@ const DROPBOX_API_URL = "https://api.dropboxapi.com/2";
 const DROPBOX_APP_KEY = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY || process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID || "";
 const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET || "";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN || "";
-// Use http://localhost/callback.html as the redirect URI
-// This static HTML page will handle the redirect to our app
-// Important: We use just 'localhost' without a port number for Dropbox OAuth
-// The callback.html page will handle redirecting back to the correct port
-const REDIRECT_URI = "http://localhost/callback.html";
+// Use the actual origin URL with port for the callback
+// This ensures the redirect works properly in all environments
+const REDIRECT_URI = typeof window !== 'undefined' 
+  ? `${window.location.origin}/callback.html` 
+  : "http://localhost:3001/callback.html";
 
 type DropboxToken = {
   access_token: string;
@@ -283,7 +283,8 @@ export function useDropboxAuth() {
           },
           body: JSON.stringify({ 
             code,
-            codeVerifier
+            codeVerifier,
+            redirectUri: REDIRECT_URI
           }),
         });
 

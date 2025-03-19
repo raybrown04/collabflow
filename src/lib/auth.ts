@@ -19,17 +19,34 @@ export function useAuth() {
     useEffect(() => {
         // In development mode, always set a mock user and admin status
         if (process.env.NODE_ENV === 'development') {
-            setUser({
+            // Create a consistent mock user for development
+            const mockUser = {
                 id: TEST_USER_ID,
                 email: 'test@example.com',
                 app_metadata: {},
-                user_metadata: {},
-                aud: '',
-                created_at: ''
-            } as User)
-            setIsAdmin(true)
-            setLoading(false)
-            return
+                user_metadata: { name: 'Test User', avatar_url: '' },
+                aud: 'authenticated',
+                created_at: new Date().toISOString()
+            } as User;
+            
+            console.log('Development mode: Using mock user', mockUser);
+            setUser(mockUser);
+            setIsAdmin(true);
+            setLoading(false);
+            
+            // Add a helper function to the window object for toggling mock auth
+            if (typeof window !== 'undefined') {
+                (window as any).toggleMockAuth = (loggedIn = true) => {
+                    if (loggedIn) {
+                        setUser(mockUser);
+                        console.log('Mock user enabled');
+                    } else {
+                        setUser(null);
+                        console.log('Mock user disabled');
+                    }
+                };
+            }
+            return;
         }
 
         let subscription: { unsubscribe: () => void } | null = null;
@@ -112,7 +129,7 @@ export const TEST_USER_ID = process.env.NODE_ENV === 'development'
 export async function getCurrentUserId(): Promise<string> {
     // Always use test user ID in development mode to avoid authentication issues
     if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-        console.warn("Using test user ID in development mode")
+        console.log("Development mode: Using test user ID:", TEST_USER_ID)
         return TEST_USER_ID
     }
 
@@ -124,7 +141,7 @@ export async function getCurrentUserId(): Promise<string> {
 
             // Fallback to test user in development
             if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-                console.warn("Falling back to test user ID after error")
+                console.log("Development mode: Falling back to test user ID after error")
                 return TEST_USER_ID
             }
 
@@ -134,7 +151,7 @@ export async function getCurrentUserId(): Promise<string> {
         if (!user) {
             // Fallback to test user in development
             if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-                console.warn("Falling back to test user ID (no user found)")
+                console.log("Development mode: Falling back to test user ID (no user found)")
                 return TEST_USER_ID
             }
 
@@ -147,7 +164,7 @@ export async function getCurrentUserId(): Promise<string> {
 
         // Fallback to test user in development
         if (process.env.NODE_ENV === 'development' && TEST_USER_ID) {
-            console.warn("Falling back to test user ID after exception")
+            console.log("Development mode: Falling back to test user ID after exception")
             return TEST_USER_ID
         }
 
