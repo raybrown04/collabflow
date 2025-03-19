@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dropbox Auth Callback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f7f9fc;
+      color: #333;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      max-width: 500px;
+    }
+    h1 {
+      margin-top: 0;
+      color: #0061fe;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #0061fe;
+      width: 40px;
+      height: 40px;
+      margin: 20px auto;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Dropbox Authentication</h1>
+    <p>Processing your authentication...</p>
+    <div class="spinner"></div>
+    <p id="status">Redirecting to application...</p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get the current URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      
+      // Update status message
+      const statusElement = document.getElementById('status');
+      
+      if (error) {
+        statusElement.textContent = `Error: ${error}`;
+        statusElement.style.color = 'red';
+      } else if (!code || !state) {
+        statusElement.textContent = 'Missing required parameters';
+        statusElement.style.color = 'red';
+      } else {
+        statusElement.textContent = 'Authentication successful, redirecting...';
+      }
+      
+      // Build the redirect URL
+      const redirectUrl = new URL('/app/documents', window.location.origin);
+      
+      // Add the parameters to the redirect URL
+      if (code) redirectUrl.searchParams.append('code', code);
+      if (state) redirectUrl.searchParams.append('state', state);
+      if (error) redirectUrl.searchParams.append('error', error);
+      
+      // Log for debugging
+      console.log('Redirecting to:', redirectUrl.toString());
+      
+      // Redirect after a short delay to ensure the code is still valid when used
+      setTimeout(() => {
+        window.location.href = redirectUrl.toString();
+      }, 500);
+    });
+  </script>
+</body>
+</html>
