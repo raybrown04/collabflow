@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     // Validate API keys
     if (!DROPBOX_APP_KEY || !DROPBOX_APP_SECRET) {
+      console.error("Dropbox API credentials not configured");
       return NextResponse.json(
         { error: "Dropbox API credentials not configured" },
         { status: 500 }
@@ -27,6 +28,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("Token refresh request received:", {
+      hasRefreshToken: !!refreshToken,
+      refreshTokenLength: refreshToken?.length,
+      requestOrigin: request.headers.get('origin') || 'unknown'
+    });
+
     // Exchange the refresh token for a new access token
     const tokenResponse = await fetch(DROPBOX_TOKEN_URL, {
       method: "POST",
@@ -42,12 +49,48 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    // Try to parse the response as JSON, but handle non-JSON responses gracefully
+    let tokenData;
+    const responseText = await tokenResponse.text();
+    try {
+      tokenData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse token refresh response as JSON:", responseText);
+      tokenData = { error: "invalid_response", error_description: "Invalid response from Dropbox API" };
+    }
 
     if (!tokenResponse.ok) {
-      console.error("Token refresh error:", tokenData);
+      console.error("Token refresh error details:", {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: tokenData,
+        headers: Object.fromEntries(tokenResponse.headers.entries())
+      });
+      
+      // If the refresh token is invalid or expired, we need to re-authenticate
+      if (tokenResponse.status === 400 && 
+          (tokenData.error === "invalid_grant" || tokenData.error === "expired_token")) {
+        return NextResponse.json(
+          { 
+            error: "Refresh token expired or invalid",
+            details: {
+              error_type: tokenData.error,
+              requires_reauth: true
+            }
+          },
+          { status: 401 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: tokenData.error_description || "Token refresh failed" },
+        { 
+          error: tokenData.error_description || "Token refresh failed",
+          details: {
+            error_type: tokenData.error || "unknown",
+            status: tokenResponse.status,
+            raw_response: process.env.NODE_ENV === 'development' ? responseText : undefined
+          }
+        },
         { status: tokenResponse.status }
       );
     }
@@ -91,6 +134,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("Token refresh successful, new token expires at:", expiresAt.toISOString());
+
     // Return the new tokens to the client
     return NextResponse.json({
       access_token: tokenData.access_token,
@@ -100,8 +145,25 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Token refresh error:", error);
+    
+    // Provide more detailed error information
+    let errorMessage = "Internal server error";
+    let errorDetails = {};
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = {
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      };
+    }
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

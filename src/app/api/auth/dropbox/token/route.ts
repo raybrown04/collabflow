@@ -4,8 +4,15 @@ import { createServerSupabaseClient } from "@/lib/supabase/serverClient";
 
 // Dropbox API configuration
 const DROPBOX_TOKEN_URL = "https://api.dropboxapi.com/oauth2/token";
-const DROPBOX_APP_KEY = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY || "";
+const DROPBOX_APP_KEY = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY || process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID || "";
 const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET || "";
+
+// Log environment variables for debugging (without exposing secrets)
+console.log("Dropbox API Configuration:", {
+  hasAppKey: !!DROPBOX_APP_KEY,
+  hasAppSecret: !!DROPBOX_APP_SECRET,
+  tokenUrl: DROPBOX_TOKEN_URL
+});
 
 export async function GET() {
   try {
@@ -33,9 +40,9 @@ export async function GET() {
       .from("dropbox_auth")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (authError && authError.code !== "PGRST116") {
+    if (authError) {
       console.error("Error fetching Dropbox auth:", authError);
       return NextResponse.json(
         { error: "Failed to fetch Dropbox authentication" },
@@ -92,6 +99,13 @@ export async function POST(request: NextRequest) {
     const requestBody = await request.json();
     const { code, codeVerifier, redirectUri = "" } = requestBody;
 
+    console.log("Token exchange request received:", {
+      hasCode: !!code,
+      codeVerifierLength: codeVerifier?.length,
+      providedRedirectUri: redirectUri || "none",
+      requestOrigin: request.headers.get('origin') || 'unknown'
+    });
+
     if (!code) {
       return NextResponse.json(
         { error: "Authorization code is required" },
@@ -106,33 +120,99 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Use the provided redirectUri or fallback to a default value
-    // This ensures the same redirect URI is used in both the auth request and token exchange
-    const finalRedirectUri = redirectUri || `${request.nextUrl.origin}/callback.html`;
+    // Environment configuration with fallbacks for server-side
+    const DEV_HOST = process.env.NEXT_PUBLIC_DEV_HOST || 'localhost';
+    const DEV_PORT = process.env.NEXT_PUBLIC_DEV_PORT || '3000';
+    const PROD_URL = process.env.NEXT_PUBLIC_URL || '';
+    
+    // Determine the base URL if redirectUri is not provided
+    const getBaseUrl = () => {
+      // Use request origin if available
+      const origin = request.headers.get('origin');
+      if (origin && origin !== 'null') {
+        return origin;
+      }
+      
+      // Use request URL origin as fallback
+      if (request.nextUrl?.origin && request.nextUrl.origin !== 'null') {
+        return request.nextUrl.origin;
+      }
+      
+      // Otherwise use environment-based fallback
+      if (process.env.NODE_ENV === 'production') {
+        return PROD_URL || 'https://app.rb3.io';
+      } else {
+        return `http://${DEV_HOST}:${DEV_PORT}`;
+      }
+    };
+    
+    // Use the provided redirectUri or fallback to a dynamically determined one
+    const finalRedirectUri = redirectUri || `${getBaseUrl()}/callback.html`;
+    
+    console.log("Using redirect URI:", finalRedirectUri);
+
+    // Log the request parameters for debugging
+    console.log("Token exchange request parameters:", {
+      grant_type: "authorization_code",
+      code: code ? "present" : "missing",
+      redirect_uri: finalRedirectUri,
+      code_verifier_length: codeVerifier?.length,
+      client_id: DROPBOX_APP_KEY ? "present" : "missing"
+    });
+
+    // Prepare the form data for the token request
+    const formData = new URLSearchParams();
+    formData.append("grant_type", "authorization_code");
+    formData.append("code", code);
+    formData.append("redirect_uri", finalRedirectUri);
+    formData.append("code_verifier", codeVerifier);
+    formData.append("client_id", DROPBOX_APP_KEY);
+    formData.append("client_secret", DROPBOX_APP_SECRET);
 
     // Exchange the authorization code for tokens with PKCE
     const tokenResponse = await fetch(DROPBOX_TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(
-          `${DROPBOX_APP_KEY}:${DROPBOX_APP_SECRET}`
-        ).toString("base64")}`,
+        // For public clients using PKCE, we should NOT include the Authorization header
+        // as it's not needed and can cause issues
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: finalRedirectUri,
-        code_verifier: codeVerifier,
-      }),
+      body: formData,
     });
 
-    const tokenData = await tokenResponse.json();
+    // Try to parse the response as JSON, but handle non-JSON responses gracefully
+    let tokenData;
+    const responseText = await tokenResponse.text();
+    try {
+      tokenData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse token response as JSON:", responseText);
+      tokenData = { error: "invalid_response", error_description: "Invalid response from Dropbox API" };
+    }
 
     if (!tokenResponse.ok) {
-      console.error("Token exchange error:", tokenData);
+      console.error("Token exchange error details:", {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: tokenData,
+        requestParams: {
+          redirect_uri: finalRedirectUri,
+          code_verifier_length: codeVerifier.length,
+          client_id: DROPBOX_APP_KEY ? "present" : "missing",
+          // Don't log the actual code or verifier for security
+        },
+        headers: Object.fromEntries(tokenResponse.headers.entries())
+      });
+      
       return NextResponse.json(
-        { error: tokenData.error_description || "Token exchange failed" },
+        { 
+          error: tokenData.error_description || "Token exchange failed",
+          details: {
+            error_type: tokenData.error || "unknown",
+            status: tokenResponse.status,
+            raw_response: process.env.NODE_ENV === 'development' ? responseText : undefined
+          }
+        },
         { status: tokenResponse.status }
       );
     }
@@ -185,8 +265,25 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Token exchange error:", error);
+    
+    // Provide more detailed error information
+    let errorMessage = "Internal server error";
+    let errorDetails = {};
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = {
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      };
+    }
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

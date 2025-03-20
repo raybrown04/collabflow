@@ -14,11 +14,33 @@ const DROPBOX_API_URL = "https://api.dropboxapi.com/2";
 const DROPBOX_APP_KEY = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY || process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID || "";
 const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET || "";
 const DROPBOX_ACCESS_TOKEN = process.env.DROPBOX_ACCESS_TOKEN || "";
-// Use the actual origin URL with port for the callback
-// This ensures the redirect works properly in all environments
+
+// Environment configuration with fallbacks
+const DEV_HOST = process.env.NEXT_PUBLIC_DEV_HOST || 'localhost';
+const DEV_PORT = process.env.NEXT_PUBLIC_DEV_PORT || '3000,3001,3002'; // Default fallback
+const PROD_URL = process.env.NEXT_PUBLIC_URL || '';
+
+// Determine the base URL based on environment
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Browser - use the current origin
+    return window.location.origin;
+  }
+  
+  // Server-side rendering
+  if (process.env.NODE_ENV === 'production') {
+    // Production - use the configured URL or a reasonable default
+    return PROD_URL || 'https://app.rb3.io';
+  } else {
+    // Development - use host and port from env vars or defaults
+    return `http://${DEV_HOST}:${DEV_PORT}`;
+  }
+};
+
+// Set the redirect URI using the determined base URL
 const REDIRECT_URI = typeof window !== 'undefined' 
-  ? `${window.location.origin}/callback.html` 
-  : "http://localhost:3001/callback.html";
+  ? `${window.location.origin}/callback.html`
+  : `${getBaseUrl()}/callback.html`;
 
 type DropboxToken = {
   access_token: string;
@@ -28,11 +50,27 @@ type DropboxToken = {
 };
 
 // Helper function to generate a random string for PKCE
+// Must be between 43-128 characters as per OAuth PKCE spec
 function generateRandomString(length: number): string {
+  // Use only characters allowed in the PKCE spec
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  
+  // Ensure length is within the required range (43-128)
+  const finalLength = Math.max(43, Math.min(length, 128));
+  
   let text = '';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  // Use crypto API for better randomness if available
+  if (typeof window !== 'undefined' && window.crypto) {
+    const randomValues = new Uint8Array(finalLength);
+    window.crypto.getRandomValues(randomValues);
+    for (let i = 0; i < finalLength; i++) {
+      text += possible.charAt(randomValues[i] % possible.length);
+    }
+  } else {
+    // Fallback to Math.random if crypto API is not available
+    for (let i = 0; i < finalLength; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
   }
   return text;
 }
@@ -48,11 +86,12 @@ async function sha256(plain: string): Promise<string> {
 // Helper function to base64url encode
 function base64UrlEncode(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  const base64 = btoa(String.fromCharCode(...bytes));
+  const base64 = btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+  // Replace characters according to base64url specifications (RFC 4648)
   return base64
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+    .replace(/\+/g, '-')  // '+' → '-'
+    .replace(/\//g, '_')  // '/' → '_'
+    .replace(/=+$/, '');  // Remove trailing '='
 }
 
 export function useDropboxAuth() {
@@ -105,9 +144,18 @@ export function useDropboxAuth() {
   const refreshToken = useCallback(
     async (refreshTokenStr: string) => {
       try {
+        // Determine the API endpoint URL based on the current origin
+        const apiBaseUrl = typeof window !== 'undefined' 
+          ? window.location.origin 
+          : getBaseUrl();
+        
+        const refreshEndpoint = `${apiBaseUrl}/api/auth/dropbox/refresh`;
+        
+        console.log("Using refresh endpoint:", refreshEndpoint);
+        
         // This would normally be implemented on the server side
         // to avoid exposing the app secret to the client
-        const response = await fetch("/api/auth/dropbox/refresh", {
+        const response = await fetch(refreshEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -204,7 +252,7 @@ export function useDropboxAuth() {
         .from("dropbox_auth")
         .select("*")
         .eq("user_id", globalUser.id)
-        .single();
+        .maybeSingle();
 
       if (authError) {
         // PGRST116 is "row not found" error, which is expected if not authenticated
@@ -274,14 +322,40 @@ export function useDropboxAuth() {
       }
 
       try {
-        // This would normally be implemented on the server side
-        // to avoid exposing the app secret to the client
-        const response = await fetch("/api/auth/dropbox/token", {
+        // Validate code verifier format (must be 43-128 characters)
+        if (!codeVerifier || codeVerifier.length < 43 || codeVerifier.length > 128) {
+          console.error("Invalid code verifier format:", { 
+            length: codeVerifier?.length,
+            required: "43-128 characters"
+          });
+          throw new Error("Invalid code verifier format");
+        }
+        
+        console.log("Starting token exchange with:", {
+          codeVerifierLength: codeVerifier.length,
+          redirectUri: REDIRECT_URI,
+          state: state ? "present" : "missing",
+          code: code ? "present" : "missing",
+          appKeyPresent: !!DROPBOX_APP_KEY,
+        });
+        
+        // Determine the API endpoint URL based on the current origin
+        const apiBaseUrl = typeof window !== 'undefined' 
+          ? window.location.origin 
+          : getBaseUrl();
+        
+        const tokenEndpoint = `${apiBaseUrl}/api/auth/dropbox/token`;
+        
+        console.log("Using token endpoint:", tokenEndpoint);
+        
+        // Prepare the request to our backend token endpoint
+        const response = await fetch(tokenEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Accept": "application/json"
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             code,
             codeVerifier,
             redirectUri: REDIRECT_URI
@@ -289,7 +363,17 @@ export function useDropboxAuth() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to exchange code for token");
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Token exchange failed:", {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            code,
+            codeVerifier,
+            redirectUri: REDIRECT_URI,
+            appKeyPresent: !!DROPBOX_APP_KEY,
+          });
+          throw new Error(`Failed to exchange code for token: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -333,7 +417,16 @@ export function useDropboxAuth() {
     try {
       // Revoke the token with Dropbox API
       if (tokens?.access_token) {
-        await fetch("/api/auth/dropbox/revoke", {
+        // Determine the API endpoint URL based on the current origin
+        const apiBaseUrl = typeof window !== 'undefined' 
+          ? window.location.origin 
+          : getBaseUrl();
+        
+        const revokeEndpoint = `${apiBaseUrl}/api/auth/dropbox/revoke`;
+        
+        console.log("Using revoke endpoint:", revokeEndpoint);
+        
+        await fetch(revokeEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -402,7 +495,25 @@ export function useDropboxAuth() {
 
   // Check authentication status on mount
   useEffect(() => {
-    checkAuth();
+    // Add a mounting flag to prevent infinite loops
+    let isMounted = true;
+    
+    const runAuthCheck = async () => {
+      if (isMounted) {
+        setIsLoading(true);
+        try {
+          await checkAuth();
+        } finally {
+          if (isMounted) setIsLoading(false);
+        }
+      }
+    };
+    
+    runAuthCheck();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [checkAuth]);
 
   // Upload a file to Dropbox

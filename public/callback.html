@@ -52,6 +52,15 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Prevent multiple redirects
+      if (sessionStorage.getItem('dropbox_redirect_in_progress')) {
+        console.log('Redirect already in progress, preventing duplicate');
+        return;
+      }
+      
+      // Set flag to prevent multiple redirects
+      sessionStorage.setItem('dropbox_redirect_in_progress', 'true');
+      
       // Get the current URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
@@ -64,9 +73,19 @@
       if (error) {
         statusElement.textContent = `Error: ${error}`;
         statusElement.style.color = 'red';
+        // Clear the redirect flag after error
+        setTimeout(() => {
+          sessionStorage.removeItem('dropbox_redirect_in_progress');
+        }, 5000);
+        return;
       } else if (!code || !state) {
         statusElement.textContent = 'Missing required parameters';
         statusElement.style.color = 'red';
+        // Clear the redirect flag after error
+        setTimeout(() => {
+          sessionStorage.removeItem('dropbox_redirect_in_progress');
+        }, 5000);
+        return;
       } else {
         statusElement.textContent = 'Authentication successful, redirecting...';
       }
@@ -77,7 +96,6 @@
       // Add the parameters to the redirect URL
       if (code) redirectUrl.searchParams.append('code', code);
       if (state) redirectUrl.searchParams.append('state', state);
-      if (error) redirectUrl.searchParams.append('error', error);
       
       // Log for debugging
       console.log('Redirecting to:', redirectUrl.toString());
@@ -85,6 +103,11 @@
       // Redirect after a short delay to ensure the code is still valid when used
       setTimeout(() => {
         window.location.href = redirectUrl.toString();
+        
+        // Clear the redirect flag after a safety timeout
+        setTimeout(() => {
+          sessionStorage.removeItem('dropbox_redirect_in_progress');
+        }, 5000);
       }, 500);
     });
   </script>
