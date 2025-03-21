@@ -242,19 +242,19 @@ export function TaskItem({
     };
 
     return (
-        <div
-            ref={dragRef}
-            className={cn(
-                "px-4 py-3 transition-all duration-200 relative group",
-                isOverdue && !task.completed ? "bg-red-50/10" : "bg-transparent",
-                isHovered && "bg-gray-50/80",
-                isMultiSelectMode && isSelected && "bg-primary/10",
-                isDragging && "opacity-50 border border-dashed border-primary bg-primary/5"
-            )}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleTaskClick}
-        >
+    <div
+        ref={dragRef}
+        className={cn(
+            "px-4 py-3 transition-all duration-200 relative group bg-transparent",
+            isOverdue && !task.completed ? "bg-transparent" : "",
+            isHovered && "bg-accent hover:bg-accent",
+            isMultiSelectMode && isSelected && "bg-primary/10",
+            isDragging && "opacity-50 border border-dashed border-primary bg-primary/5"
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleTaskClick}
+    >
             <div className="flex items-start gap-3">
                 {/* Drag handle */}
                 {!isMultiSelectMode && isOwnedByCurrentUser && (
@@ -409,7 +409,7 @@ export function TaskItem({
                                 isOverdue && !task.completed && "text-red-500"
                             )}>
                                 <Clock className="h-3 w-3" />
-                                <span>
+                                <span className="text-muted-foreground">
                                     {isToday ? "Today" : 
                                      isTomorrow ? "Tomorrow" : 
                                      formattedDay}

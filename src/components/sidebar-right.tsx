@@ -201,6 +201,10 @@ export function SidebarRight() {
             <Sidebar
                 side="right"
                 className="border-1"
+                style={{
+                    zIndex: 10, // Ensure proper stacking with main content
+                    width: 'var(--sidebar-right-width)' // Use CSS variable for width
+                }}
             >
                 <div className="flex flex-col gap-0 p-0 px-1">
                     <div className="h-full flex flex-col">
@@ -216,7 +220,7 @@ export function SidebarRight() {
                         <div className="flex-1 overflow-hidden flex flex-col">
                             <div className="flex-1 overflow-hidden">
                                 {/* Calendar section with higher z-index to ensure buttons are clickable */}
-                                <div className="pt-2 pb-0 px-2 mb-0 flex flex-col" style={{ position: 'relative', zIndex: 40 }}>
+                                <div className="pt-4 pb-0 px-2 mb-0 flex flex-col w-full" style={{ position: 'relative', zIndex: 40 }}>
                                     <div className="calendar-section flex flex-col">
                                         <div className="flex items-center justify-between mb-0">
                                             <div className="flex flex-col">
@@ -316,6 +320,8 @@ export function SidebarRight() {
                                                 overflow: 'hidden',
                                                 marginBottom: 0,
                                                 width: '100%',
+                                                padding: '0',
+                                                boxSizing: 'border-box',
                                                 transition: 'height 0.2s ease, opacity 0.2s ease'
                                             }}
                                         >
@@ -331,10 +337,12 @@ export function SidebarRight() {
 
                                 {/* Events container with flexible spacing */}
                                 <div
-                                    className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0 px-2 day-events-container"
+                                    className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0 px-0 day-events-container"
                                     style={{
                                         position: 'relative',
-                                        zIndex: 30
+                                        zIndex: 30,
+                                        width: '100%',
+                                        boxSizing: 'border-box'
                                     }}
                                 >
                                     {isLoading ? (
@@ -393,7 +401,7 @@ export function SidebarRight() {
                     }
                 }}
             >
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md dialog-transition">
                     <DialogHeader>
                         <DialogTitle>Add Event</DialogTitle>
                     </DialogHeader>

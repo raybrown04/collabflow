@@ -33,7 +33,16 @@ export default function AppLayout({
     return (
         <SidebarProvider>
             <SidebarLeft />
-            <SidebarInset className="!border-0 overflow-hidden">
+            <SidebarInset 
+                className="!border-0 overflow-hidden no-right-sidebar"
+                style={{
+                    // Ensure proper spacing with Tailwind v4
+                    position: 'relative',
+                    zIndex: 20,
+                    width: 'auto', // Let the CSS variables control the width
+                    flex: 1
+                }}
+            >
                 <DashboardHeader
                     isProjectPage={isProjectPage}
                     projectName={projectName}

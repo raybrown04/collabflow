@@ -364,7 +364,7 @@ export function TaskListContent({
                         </div>
                         <div className="font-medium text-base">{title}</div>
                     </div>
-                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs text-black dark:text-white">
+                    <div className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs">
                         {taskCount}
                     </div>
                 </div>
@@ -392,7 +392,7 @@ export function TaskListContent({
     return (
         <div>
             {/* Header with title and more options aligned horizontally */}
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
                 <h2 className="text-xl font-semibold">Tasks</h2>
                 
                 <div className="relative" ref={isDropdownOpen('more') ? dropdownRef : undefined}>
@@ -414,7 +414,7 @@ export function TaskListContent({
                         <div className="py-1">
                             {/* Add Task option */}
                             <button 
-                                className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                                className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => {
                                     setIsAddDialogOpen(true);
                                     toggleDropdown('more');
@@ -426,7 +426,7 @@ export function TaskListContent({
                             
                             {/* Clear Completed option */}
                             <button 
-                                className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                                className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => {
                                     // Find all completed tasks
                                     const completedTasks = filteredTasks.filter(task => task.completed);
@@ -474,7 +474,7 @@ export function TaskListContent({
                             {/* Additional options */}
                             <div>
                                 <button 
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center"
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
                                     onClick={() => {
                                         setMultiSelectMode(true);
                                         toggleDropdown('more');
@@ -484,7 +484,7 @@ export function TaskListContent({
                                     <span>Multi-select</span>
                                 </button>
                                 
-                                <a href="#" className="px-4 py-2 text-sm hover:bg-gray-100 block">
+                                <a href="#" className="px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground block">
                                     Print
                                 </a>
                             </div>
@@ -756,7 +756,7 @@ export function TaskListContent({
                 </div>
 
                 {/* Add button at the bottom of the container */}
-                <div className="px-4 py-3 border-t">
+                <div className="px-4 py-3 border-t bg-sidebar">
                     <Button
                         variant="ghost"
                         className="w-full justify-start text-sm text-muted-foreground"
@@ -776,7 +776,7 @@ export function TaskListContent({
                     if (!open) stableClearSelectedTasks();
                 }, [stableClearSelectedTasks, setIsAddDialogOpen])}
             >
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] bg-background text-foreground">
                     <DialogHeader>
                         <DialogTitle>Add New Task</DialogTitle>
                     </DialogHeader>
@@ -854,7 +854,7 @@ export function TaskListContent({
                     if (!open) stableClearSelectedTasks();
                 }, [stableClearSelectedTasks, setIsEditDialogOpen])}
             >
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] bg-background text-foreground">
                     <DialogHeader>
                         <DialogTitle>Edit Task</DialogTitle>
                     </DialogHeader>

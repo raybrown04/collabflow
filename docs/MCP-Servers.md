@@ -1,536 +1,219 @@
-# MCP Servers
+# MCP Servers Documentation
 
-*Last Updated: March 14, 2025*
+*Last Updated: March 20, 2025*
 
-This document provides a comprehensive overview of the Model Context Protocol (MCP) servers used as tools to build the CollabFlow project. These servers are not integrated into the application itself but serve as development tools.
-
-## Table of Contents
-- [Overview](#overview)
-- [Available MCP Servers](#available-mcp-servers)
-- [Memory MCP](#memory-mcp)
-- [Perplexity MCP](#perplexity-mcp)
-- [Browser Tools](#browser-tools)
-- [21st.dev Magic MCP](#21stdev-magic-mcp)
-- [Firecrawl MCP](#firecrawl-mcp)
-- [Best Practices](#best-practices)
-
----
-
-## Overview
-
-```mermaid
-graph TD
-    A[MCP Servers] --> B[Development Tools]
-    A --> C[AI Integration]
-    A --> D[Testing & Debugging]
-    A --> E[Content Generation]
-    
-    B --> B1[memory]
-    B --> B2[21st-dev-magic-mcp]
-    
-    C --> C1[perplexity-mcp]
-    C --> C2[sequentialthinking]
-    
-    D --> D1[browser-tools]
-    D --> D2[supabase-mcp]
-    
-    E --> E1[firecrawl-mcp]
-    
-    %% Style Definitions
-    classDef primary fill:#d4edda,stroke:#28a745,color:#155724
-    
-    %% Apply Styles
-    class B1,C1,D1,E1 primary
-```
-
-Model Context Protocol (MCP) servers provide powerful tools for development, testing, and content generation. These servers are used during the development process but are not integrated into the final application.
-
----
+CollabFlow leverages several Model Context Protocol (MCP) servers to enhance development workflow and provide additional functionality. This document describes the available MCP servers, their capabilities, and how to use them.
 
 ## Available MCP Servers
 
-The CollabFlow project uses the following MCP servers as development tools:
+### 1. UI Style Guardian MCP Server
 
-1. **memory** - For persistent knowledge storage during development
-2. **perplexity-mcp** - For AI-powered search and documentation
-3. **supabase-mcp** - For database operations and testing
-4. **sequentialthinking** - For structured problem-solving
-5. **firecrawl-mcp** - For web scraping and content extraction
-6. **browser-tools** - For browser debugging and testing
-7. **21st-dev-magic-mcp** - For UI component generation and logo integration
+The UI Style Guardian MCP server ensures consistent styling across the application by validating components against established style guidelines and providing recommendations.
 
----
+#### Tools
 
-## Memory MCP
+- **`validate_component`**: Validates a component's code against the style guidelines
+  - Parameters:
+    - `code` (required): The component code to validate
+    - `componentName` (optional): The name of the component being validated
+  - Returns: Validation results including issues, suggestions, and fixed code
 
-The memory MCP server provides a persistent knowledge graph for storing information during development.
+- **`get_style_rules`**: Retrieves style rules for a specific component type
+  - Parameters:
+    - `componentType` (required): The type of component to get rules for (e.g., 'buttons', 'inputs')
+  - Returns: Style rules and recommended CSS classes for the component type
 
-### Key Features
+#### Resources
 
-- **Knowledge Graph**: Store and retrieve information in a structured graph
-- **Entity Management**: Create, update, and delete entities
-- **Relationship Management**: Define relationships between entities
-- **Search Capabilities**: Search for entities and relationships
-- **Database Integration**: Persistent storage in Supabase database
-- **API Integration**: Server-side API routes for client-side components
+- `style-guide://general`: Full UI style guide with color palette, typography, spacing, and component recommendations
+- `style-guide://form-elements`: Styling guidelines for form elements
+- `style-guide://component-patterns`: Recommended patterns for common UI components
 
-### Usage Examples
+#### Usage Examples
 
 ```typescript
-// Store information in memory graph
-await use_mcp_tool("mcp-memory", "create_entities", {
-  entities: [
-    {
-      name: "CalendarComponent",
-      entityType: "UIComponent",
-      observations: [
-        "Implemented with react-day-picker",
-        "Supports event indicators",
-        "Bidirectional synchronization with events list"
-      ]
-    }
-  ]
+// Validating a component
+const validation = await useMcp('ui-style-guardian-mcp', 'validate_component', {
+  code: componentCode,
+  componentName: 'MyComponent'
 });
 
-// Create relationships between entities
-await use_mcp_tool("mcp-memory", "create_relations", {
-  relations: [
-    {
-      from: "CalendarComponent",
-      to: "EventsList",
-      relationType: "synchronizes with"
-    }
-  ]
-});
-
-// Retrieve information from memory graph
-const result = await use_mcp_tool("mcp-memory", "search_nodes", {
-  query: "CalendarComponent"
-});
-
-// Using the useMcpMemory hook (client-side)
-import { useMcpMemory } from "@/hooks/useMcpMemory";
-
-function MyComponent() {
-  const { createEntities, createRelations, isLoading, error } = useMcpMemory();
-  
-  const handleDocumentUpload = async (document) => {
-    // Create document entity in memory graph
-    await createEntities([
-      {
-        name: `Document: ${document.name}`,
-        entityType: "Document",
-        observations: [
-          `Uploaded on ${new Date().toLocaleString()}`,
-          `Size: ${Math.round(document.size / 1024)} KB`,
-          `Type: ${document.type}`
-        ]
-      }
-    ]);
-    
-    // Create relationship to project if applicable
-    if (document.projectId) {
-      await createRelations([
-        {
-          from: `Document: ${document.name}`,
-          to: `Project: ${document.projectName}`,
-          relationType: "belongs_to"
-        }
-      ]);
-    }
-  };
-  
-  return (
-    // Component JSX
-  );
+if (!validation.passed) {
+  console.log('Style issues found:', validation.suggestions);
+  if (validation.fixedCode) {
+    console.log('Suggested fixed code:', validation.fixedCode);
+  }
 }
+
+// Getting style rules for buttons
+const buttonRules = await useMcp('ui-style-guardian-mcp', 'get_style_rules', {
+  componentType: 'buttons'
+});
+console.log('Primary button class:', buttonRules.rules.primary);
 ```
 
-### Integration with Document Management
+### 2. Perplexity MCP Server
 
-The memory MCP server is integrated with the document management system to track documents and their relationships to projects. This integration provides the following benefits:
+Provides access to the Perplexity API for AI-powered search and documentation.
 
-1. **Document Tracking**: Track document uploads, downloads, and deletions
-2. **Project Associations**: Track document associations with projects
-3. **Version History**: Track document version history
-4. **Audit Trail**: Maintain an audit trail of document operations
+#### Tools
 
-#### Implementation Details
+- `chat_perplexity`: Maintains ongoing conversations with Perplexity AI
+- `search`: Performs general search queries to get information on any topic
+- `get_documentation`: Gets documentation for a specific technology, library, or API
+- `find_apis`: Finds and evaluates APIs that could be integrated into a project
+- `check_deprecated_code`: Checks if code or dependencies might be using deprecated features
 
-1. **Database Schema**:
-   - `mcp_entities` table for storing entities
-   - `mcp_relations` table for storing relationships
-   - Row-level security policies for data protection
+### 3. Firecrawl MCP Server
 
-2. **API Routes**:
-   - `/api/mcp/memory` route for server-side operations
-   - Supports create_entities, create_relations, add_observations, delete_entities
+Provides web scraping and content extraction capabilities.
 
-3. **Client-Side Hooks**:
-   - `useMcpMemory` hook for client-side components
-   - Provides createEntities, createRelations, addObservations, deleteEntities functions
+#### Tools
 
-4. **Document Upload Integration**:
-   - Creates document entity on upload
-   - Creates project-document relation if applicable
-   - Adds observations about document metadata
+- `firecrawl_scrape`: Scrapes a single webpage with advanced options
+- `firecrawl_map`: Discovers URLs from a starting point
+- `firecrawl_crawl`: Starts an asynchronous crawl of multiple pages
+- `firecrawl_batch_scrape`: Scrapes multiple URLs in batch mode
+- `firecrawl_search`: Searches and retrieves content from web pages
+- `firecrawl_extract`: Extracts structured information from web pages using LLM
 
-5. **Document Deletion Integration**:
-   - Updates document entity on deletion
-   - Maintains relationship history
+### 4. Browser Tools MCP Server
 
-### Best Practices
+Provides browser debugging and testing capabilities.
 
-1. **Store Knowledge**: Use the memory graph to store knowledge that needs to be persistent across development sessions.
-2. **Retrieve Knowledge**: Before searching external sources, check if the information is already in the memory graph.
-3. **Update Knowledge**: Keep the memory graph up-to-date by updating entities when new information is available.
-4. **Organize Knowledge**: Use entity types and relations to organize knowledge in a structured way.
-5. **Fallback Mechanism**: Implement fallback mechanisms for when the MCP server is not available.
-6. **Error Handling**: Implement proper error handling for MCP operations.
+#### Tools
 
----
+- `getConsoleLogs`: Checks browser logs
+- `getConsoleErrors`: Checks browser console errors
+- `getNetworkErrors`: Checks network ERROR logs
+- `getNetworkLogs`: Checks ALL network logs
+- `takeScreenshot`: Takes a screenshot of the current browser tab
+- Various audit tools: `runAccessibilityAudit`, `runPerformanceAudit`, `runSEOAudit`, etc.
 
-## Perplexity MCP
+### 5. Memory MCP Server
 
-The perplexity-mcp server provides AI-powered search and documentation capabilities during development.
+Provides persistent knowledge storage capabilities.
 
-### Key Features
+#### Tools
 
-- **AI Search**: Search for information using natural language
-- **Documentation**: Get documentation for specific technologies
-- **API Reference**: Access API references and examples
-- **Code Snippets**: Find code snippets and examples
+- `create_entities`: Creates multiple new entities in the knowledge graph
+- `create_relations`: Creates multiple new relations between entities
+- `add_observations`: Adds new observations to existing entities
+- `delete_entities`: Deletes multiple entities and their associated relations
+- `delete_observations`: Deletes specific observations from entities
+- `delete_relations`: Deletes multiple relations from the knowledge graph
+- `read_graph`: Reads the entire knowledge graph
+- `search_nodes`: Searches for nodes in the knowledge graph based on a query
+- `open_nodes`: Opens specific nodes in the knowledge graph by their names
 
-### Usage Examples
+### 6. 21st Dev Magic MCP Server
 
-```typescript
-// Search for information
-const searchResults = await use_mcp_tool({
-  server_name: 'perplexity-mcp',
-  tool_name: 'search',
-  arguments: {
-    query: "Next.js App Router best practices",
-    detail_level: "normal"
+Provides UI component generation capabilities.
+
+#### Tools
+
+- `21st_magic_component_builder`: Generates UI components based on user requests
+- `logo_search`: Searches and returns logos in specified format
+- `21st_magic_component_inspiration`: Fetches component inspiration from 21st.dev
+
+### 7. Filesystem MCP Server
+
+Provides filesystem access capabilities scoped to the project directory.
+
+#### Tools
+
+- `read_file`: Reads the contents of a file
+- `write_to_file`: Creates a new file or overwrites an existing file
+- `replace_in_file`: Replaces content in an existing file
+- `list_files`: Lists files and directories
+- `search_files`: Searches for files matching a pattern
+- Various other filesystem operations
+
+## Integration Examples
+
+### Style Validation in CI/CD Pipeline
+
+```javascript
+// Example: Pre-commit hook for style validation
+const validateComponent = async (filePath) => {
+  const code = await fs.readFile(filePath, 'utf8');
+  const componentName = path.basename(filePath, path.extname(filePath));
+  
+  const validation = await useMcp('ui-style-guardian-mcp', 'validate_component', {
+    code,
+    componentName
+  });
+  
+  if (!validation.passed) {
+    console.error(`Style issues found in ${filePath}:`);
+    validation.suggestions.forEach(suggestion => console.error(`- ${suggestion}`));
+    return false;
   }
-});
-
-// Get documentation for a specific technology
-const docs = await use_mcp_tool({
-  server_name: 'perplexity-mcp',
-  tool_name: 'get_documentation',
-  arguments: {
-    query: "Supabase Row Level Security",
-    context: "React application"
-  }
-});
-
-// Check for deprecated code
-const deprecationCheck = await use_mcp_tool({
-  server_name: 'perplexity-mcp',
-  tool_name: 'check_deprecated_code',
-  arguments: {
-    code: "componentWillMount() { ... }",
-    technology: "React"
-  }
-});
-
-// Find suitable APIs
-const apiSuggestions = await use_mcp_tool({
-  server_name: 'perplexity-mcp',
-  tool_name: 'find_apis',
-  arguments: {
-    requirement: "Calendar integration",
-    context: "React application with Next.js"
-  }
-});
+  
+  return true;
+};
 ```
 
----
+### AI-Powered Documentation Enhancement
 
-## Browser Tools
-
-The browser-tools MCP server provides debugging and testing capabilities for browser-based applications.
-
-### Key Features
-
-- **Console Logs**: View browser console logs
-- **Network Logs**: Monitor network requests and responses
-- **Screenshots**: Take screenshots of the current browser state
-- **Accessibility Audit**: Run accessibility audits
-- **Performance Audit**: Run performance audits
-
-### Usage Examples
-
-```typescript
-// Check console logs
-const consoleLogs = await use_mcp_tool({
-  server_name: 'browser-tools',
-  tool_name: 'getConsoleLogs',
-  arguments: {}
-});
-
-// Check console errors
-const consoleErrors = await use_mcp_tool({
-  server_name: 'browser-tools',
-  tool_name: 'getConsoleErrors',
-  arguments: {}
-});
-
-// Take a screenshot
-const screenshot = await use_mcp_tool({
-  server_name: 'browser-tools',
-  tool_name: 'takeScreenshot',
-  arguments: {}
-});
-
-// Run accessibility audit
-const accessibilityAudit = await use_mcp_tool({
-  server_name: 'browser-tools',
-  tool_name: 'runAccessibilityAudit',
-  arguments: {}
-});
-
-// Run performance audit
-const performanceAudit = await use_mcp_tool({
-  server_name: 'browser-tools',
-  tool_name: 'runPerformanceAudit',
-  arguments: {}
-});
-```
-
----
-
-## 21st.dev Magic MCP
-
-The 21st-dev-magic-mcp server provides UI component generation and logo integration capabilities.
-
-### Key Features
-
-- **UI Component Generation**: Generate React UI components based on natural language descriptions
-- **Logo Integration**: Find and integrate brand logos into the application
-- **Tailwind CSS Integration**: Components use Tailwind CSS for styling
-- **Radix UI Integration**: Components use Radix UI for accessibility
-
-### Usage Examples
-
-```typescript
-// Generate a UI component
-const componentResult = await use_mcp_tool({
-  server_name: '21st-dev-magic-mcp',
-  tool_name: '21st_magic_component_builder',
-  arguments: {
-    message: "Create a responsive pricing card component with a title, price, feature list, and a call-to-action button",
-    searchQuery: "pricing card"
-  }
-});
-
-// Search for company logos
-const logoResult = await use_mcp_tool({
-  server_name: '21st-dev-magic-mcp',
-  tool_name: 'logo_search',
-  arguments: {
-    queries: ["github", "discord", "slack"],
-    format: "TSX" // Options: "JSX", "TSX", "SVG"
-  }
-});
-```
-
-### Best Practices
-
-1. **Component Organization**:
-   - Store generated components in `src/components/ui/` directory
-   - Keep logo components in `src/components/icons/` directory
-
-2. **Customization**:
-   - Customize generated components to match your project's design system
-   - Adjust Tailwind classes to maintain consistency with existing components
-
----
-
-## Firecrawl MCP
-
-The firecrawl-mcp server provides web scraping and content extraction capabilities.
-
-### Key Features
-
-- **Web Scraping**: Scrape content from websites
-- **Content Extraction**: Extract specific content from web pages
-- **Web Search**: Search the web for information
-- **URL Discovery**: Discover URLs from a starting point
-
-### Usage Examples
-
-```typescript
-// Scrape a webpage
-const scrapedContent = await use_mcp_tool({
-  server_name: 'firecrawl-mcp-server',
-  tool_name: 'firecrawl_scrape',
-  arguments: {
-    url: "https://example.com",
-    formats: ["markdown"],
-    onlyMainContent: true
-  }
-});
-
-// Search the web
-const searchResults = await use_mcp_tool({
-  server_name: 'firecrawl-mcp-server',
-  tool_name: 'firecrawl_search',
-  arguments: {
-    query: "Next.js App Router",
-    limit: 5
-  }
-});
-
-// Discover URLs
-const urlMap = await use_mcp_tool({
-  server_name: 'firecrawl-mcp-server',
-  tool_name: 'firecrawl_map',
-  arguments: {
-    url: "https://example.com",
-    limit: 100
-  }
-});
-
-// Extract structured data
-const extractedData = await use_mcp_tool({
-  server_name: 'firecrawl-mcp-server',
-  tool_name: 'firecrawl_extract',
-  arguments: {
-    urls: ["https://example.com"],
-    prompt: "Extract product information including name, price, and description"
-  }
-});
-```
-
----
-
-## Best Practices
-
-### Error Handling
-
-Always implement proper error handling when using MCP tools:
-
-```typescript
-try {
-  const result = await use_mcp_tool({
-    server_name: 'perplexity-mcp',
-    tool_name: 'search',
-    arguments: {
-      query: "search query"
+```javascript
+// Example: Enhancing documentation with AI insights
+const enhanceDocumentation = async (docPath) => {
+  const content = await fs.readFile(docPath, 'utf8');
+  
+  // Extract technical terms using Firecrawl
+  const extraction = await useMcp('firecrawl-mcp-server', 'firecrawl_extract', {
+    urls: [docPath],
+    prompt: "Extract all technical terms and their definitions",
+    schema: {
+      type: "object",
+      properties: {
+        terms: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              term: { type: "string" },
+              definition: { type: "string" }
+            }
+          }
+        }
+      }
     }
   });
   
-  // Process result
-} catch (error) {
-  console.error("MCP tool error:", error);
-  
-  // Fallback behavior
-}
-```
-
-### Development Mode
-
-Implement development mode support for MCP tools:
-
-```typescript
-// Development mode detection
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-async function searchWithPerplexity(query) {
-  // In development mode, use mock data
-  if (isDevelopment) {
-    console.log("Development mode: Using mock search results");
-    return mockSearchResults;
-  }
-  
-  // In production, use MCP tool
-  try {
-    const result = await use_mcp_tool({
-      server_name: 'perplexity-mcp',
-      tool_name: 'search',
-      arguments: {
-        query
-      }
-    });
-    
-    return result;
-  } catch (error) {
-    console.error("Search error:", error);
-    
-    // Fallback to mock data in development mode
-    if (isDevelopment) {
-      console.warn("Falling back to mock search results");
-      return mockSearchResults;
-    }
-    
-    throw error;
-  }
-}
-```
-
-### Integration with React Components
-
-Integrate MCP tools with React components using custom hooks:
-
-```typescript
-// Custom hook for Perplexity search
-function usePerplexitySearch() {
-  const [results, setResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  
-  const search = useCallback(async (query) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const result = await use_mcp_tool({
-        server_name: 'perplexity-mcp',
-        tool_name: 'search',
-        arguments: {
-          query
-        }
+  // Get expanded documentation for each term
+  const enhancedTerms = await Promise.all(
+    extraction.terms.map(async (term) => {
+      const docs = await useMcp('perplexity-mcp', 'get_documentation', {
+        query: term.term,
+        context: "In the context of our project"
       });
       
-      setResults(result);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      return [];
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return {
+        ...term,
+        enhancedDefinition: docs.answer
+      };
+    })
+  );
   
-  return { search, results, isLoading, error };
-}
+  // Store in memory graph for future reference
+  await useMcp('mcp-memory', 'create_entities', {
+    entities: enhancedTerms.map(term => ({
+      name: term.term,
+      entityType: "TechnicalTerm",
+      observations: [term.enhancedDefinition]
+    }))
+  });
+  
+  return enhancedTerms;
+};
 ```
 
-### MCP Server Configuration
+## Best Practices
 
-MCP servers are configured in the `cline_mcp_settings.json` file:
-
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "disabled": false,
-      "autoApprove": ["search_nodes", "read_graph"]
-    },
-    "perplexity-mcp": {
-      "command": "node",
-      "args": ["path/to/perplexity-mcp/build/index.js"],
-      "env": {
-        "PERPLEXITY_API_KEY": "your-api-key"
-      },
-      "disabled": false,
-      "autoApprove": ["search", "get_documentation"]
-    }
-  }
-}
-```
-
-Remember that MCP servers are development tools and not part of the final application. They are used to assist in building the application but are not integrated into the application itself.
+1. **Validate components early**: Use the UI Style Guardian before committing new components
+2. **Leverage memory for context**: Store important project knowledge in the memory graph
+3. **Use browser tools for debugging**: When encountering UI issues, use browser tools to diagnose
+4. **Combine MCP servers for complex tasks**: Chain multiple MCP servers for sophisticated workflows
+5. **Document MCP usage**: Keep this documentation updated with new MCP servers and usage patterns

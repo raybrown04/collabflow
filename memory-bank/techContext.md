@@ -1,6 +1,6 @@
 # CollabFlow Technical Context
 
-*Last Updated: March 17, 2025*
+*Last Updated: March 20, 2025*
 
 ## Technology Stack
 
@@ -47,6 +47,12 @@
 - **firecrawl-mcp-server**: Web scraping and content extraction
 - **browser-tools**: Browser debugging and testing
 - **21st-dev-magic-mcp**: UI component generation
+- **ui-style-guardian-mcp**: Style validation and guidance for UI components
+  - Validates components against established style guidelines
+  - Provides style rules for component types
+  - Suggests fixes for style inconsistencies
+  - Maintains comprehensive style guide resources
+  - Enforces dark mode compatibility and theme consistency
 
 ## Development Environment
 

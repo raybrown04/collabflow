@@ -214,7 +214,7 @@ export function ReminderDialog({ isOpen, onClose, onSetReminder }: ReminderDialo
             open={isOpen} 
             onOpenChange={handleOpenChange}
         >
-            <DialogContent className="sm:max-w-md" aria-describedby="reminder-description">
+            <DialogContent className="sm:max-w-md dialog-transition" aria-describedby="reminder-description">
                 <DialogHeader>
                     <DialogTitle>Reminder</DialogTitle>
                     <DialogDescription id="reminder-description">

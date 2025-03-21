@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { GeoapifyGeocoderAutocomplete } from '@geoapify/react-geocoder-autocomplete';
-import '@geoapify/geocoder-autocomplete/styles/minimal.css';
 
 export interface LocationData {
   address: string;

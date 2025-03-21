@@ -139,7 +139,7 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
 
     return (
         <div className="h-full flex flex-col w-full max-w-full">
-            <div className="px-0 pb-4 flex flex-col h-full w-full max-w-full">
+            <div className="px-2 pb-4 flex flex-col h-full w-full max-w-full">
                 <h3 className="text-lg font-bold mb-4">
                     {format(date, "MMM d, yyyy")}
                 </h3>
@@ -149,7 +149,7 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
                         <p className="text-sm text-muted-foreground">No events scheduled for this day.</p>
                     </div>
                 ) : (
-                    <div className="space-y-2 w-full max-h-[calc(100vh-300px)] overflow-y-auto pr-1 scrollable-container">
+                    <div className="space-y-3 w-full max-h-[calc(100vh-300px)] overflow-y-auto pr-0 scrollable-container">
                         {sortedEvents.map(event => (
                             <DraggableEventCard
                                 key={event.id}
@@ -172,7 +172,7 @@ export function EventsList({ date, events, onVisibleDateChange, scrollToDateRef 
                         if (!open) setIsEditDialogOpen(false);
                     }}
                 >
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md dialog-transition">
                         <DialogHeader>
                             <DialogTitle>Edit Event</DialogTitle>
                         </DialogHeader>

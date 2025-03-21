@@ -116,7 +116,7 @@ export function ProjectSelector({ taskId, eventId, onProjectsChange }: ProjectSe
       
       {/* Project selection dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] dialog-transition">
           <DialogHeader>
             <DialogTitle>Select Project</DialogTitle>
           </DialogHeader>

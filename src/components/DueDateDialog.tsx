@@ -206,7 +206,7 @@ export function DueDateDialog({ isOpen, onClose, onSetDueDate }: DueDateDialogPr
             open={isOpen} 
             onOpenChange={handleOpenChange}
         >
-            <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
+            <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh] dialog-transition">
                 <DialogHeader>
                     <DialogTitle>Due Date</DialogTitle>
                 </DialogHeader>

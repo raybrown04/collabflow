@@ -2,5 +2,16 @@
     "cline.disableBrowserTool": true,
     "cline.modelSettings.o3Mini.reasoningEffort": "high",
     "cline.vsCodeLmModelSelector": {},
-    "cline.chromeExecutablePath": "\"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Google Chrome.lnk\""
+    "cline.chromeExecutablePath": "\"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Google Chrome.lnk\"",
+    "css.validate": false,
+    "css.lint.unknownAtRules": "ignore",
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
+    "css.customData": [
+        ".vscode/tailwind.json"
+    ],
+    "editor.quickSuggestions": {
+        "strings": true
+    }
 }

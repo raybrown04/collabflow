@@ -1,6 +1,6 @@
 # CollabFlow Active Context
 
-*Last Updated: March 19, 2025*
+*Last Updated: March 20, 2025*
 
 ## Current Focus
 
@@ -22,7 +22,47 @@ The current development focus is on enhancing the document management functional
    - ✅ Resolved route conflicts causing authentication errors
    - ✅ Removed development mode bypass for consistent auth behavior
 
+3. **CSS Modernization**
+   - ✅ Updated src/app/globals.css to use modern CSS variables and syntax
+   - ✅ Replaced all @apply directives with direct CSS properties
+   - ✅ Fixed form input styling for better dark mode compatibility
+   - ✅ Updated color references to use HSL format with CSS variables
+   - ✅ Improved scrollbar styling with modern CSS variables
+   - ✅ Enhanced AI component styling for better theme consistency
+   - ✅ Fixed task item styling to use CSS variables for colors
+   - ✅ Resolved CSS warnings related to unknown @tailwind and @apply directives
+
 ## Recent Changes
+
+### UI Style Guardian MCP Server (NEW)
+
+1. **Style Validation System**
+   - ✅ Created a custom MCP server for UI style consistency
+   - ✅ Implemented component validation against style guidelines
+   - ✅ Added style rule recommendations for different component types
+   - ✅ Created comprehensive style guide resources
+   - ✅ Built system to detect and fix theme inconsistencies
+
+### CSS Modernization
+
+1. **Tailwind CSS Syntax Updates**
+   - ✅ Replaced deprecated `@tailwind` directives with modern `@import "tailwindcss"` syntax
+   - ✅ Removed all instances of `@apply` in favor of direct CSS properties
+   - ✅ Updated all color references to use HSL format with CSS variables
+   - ✅ Fixed CSS warnings in VS Code related to unknown directives
+
+2. **Component Styling Improvements**
+   - ✅ Updated form input styling for better dark mode compatibility
+   - ✅ Enhanced AI component styling for better theme consistency
+   - ✅ Improved scrollbar styling with modern CSS variables
+   - ✅ Fixed task item styling to use CSS variables for colors
+   - ✅ Standardized color usage across all components
+
+3. **Dark Mode Enhancements**
+   - ✅ Fixed form input styling in dark mode for better visibility
+   - ✅ Updated modal dialog styling for dark mode consistency
+   - ✅ Improved contrast for text elements in dark mode
+   - ✅ Standardized dark mode color variables across components
 
 ### Authentication System Enhancements
 
@@ -110,6 +150,30 @@ We've decided to use a centralized authentication approach with the following co
    - Ensures session cookies are properly managed
    - Maintains consistent authentication rules across all environments
 
+### CSS and Styling Approach
+
+For CSS and styling, we've chosen the following approach:
+
+1. **Modern CSS Variables**
+   - Use CSS variables for colors, spacing, and other design tokens
+   - Implement HSL color format for better theme switching
+   - Maintain consistent variable naming across components
+
+2. **Direct CSS Properties**
+   - Use direct CSS properties instead of Tailwind's @apply directive
+   - Maintain clear, readable CSS with proper organization
+   - Group related styles together for better maintainability
+
+3. **Theme Consistency**
+   - Ensure consistent styling between light and dark themes
+   - Use CSS variables for theme-specific values
+   - Test all components in both themes for visual consistency
+
+4. **Component-Specific Styling**
+   - Keep component styles close to component definitions
+   - Use consistent class naming conventions
+   - Avoid global styles that might cause conflicts
+
 ### Document Management Approach
 
 For document management, we've chosen the following approach:
@@ -137,6 +201,23 @@ For document management, we've chosen the following approach:
    - Search functionality prominently accessible
 
 ## Current Challenges
+
+### CSS and Styling Challenges (RESOLVED)
+
+1. **Tailwind CSS Compatibility**
+   - ✅ Resolving warnings for unknown @tailwind directives
+   - ✅ Updating deprecated @apply usage
+   - ✅ Ensuring proper CSS variable usage
+
+2. **Dark Mode Consistency**
+   - ✅ Ensuring consistent styling in dark mode
+   - ✅ Fixing form input visibility in dark mode
+   - ✅ Maintaining proper contrast ratios
+
+3. **Component Styling Consistency**
+   - ✅ Standardizing styling approach across components
+   - ✅ Ensuring consistent spacing and alignment
+   - ✅ Maintaining visual hierarchy in different themes
 
 ### Authentication Challenges (RESOLVED)
 
@@ -181,7 +262,14 @@ For document management, we've chosen the following approach:
 
 ### Short-term Tasks
 
-1. **Authentication**
+1. **CSS and Styling**
+   - ✅ Fix CSS warnings in globals.css
+   - ✅ Update component styling to use modern CSS variables
+   - ✅ Improve dark mode compatibility
+   - Audit remaining components for styling consistency
+   - Document CSS variables and styling conventions
+
+2. **Authentication**
    - ✅ Migrate from deprecated auth-helpers to @supabase/ssr
    - ✅ Fix cookie handling in Next.js 15+
    - ✅ Resolve route conflicts causing authentication errors
@@ -190,7 +278,7 @@ For document management, we've chosen the following approach:
    - Implement remember me functionality
    - Add session timeout handling
 
-2. **Document Management**
+3. **Document Management**
    - ✅ Complete file operations (upload/download)
    - ✅ Implement version history viewer
    - ✅ Add project filtering for documents
@@ -222,6 +310,40 @@ For document management, we've chosen the following approach:
    - Create context-aware recommendations
 
 ## Implementation Considerations
+
+### CSS Implementation
+
+The CSS modernization follows this pattern:
+
+```css
+/* Modern CSS variables approach */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  /* Other variables */
+}
+
+.dark-theme {
+  --background: 10 10% 5%;
+  --foreground: 210 40% 98%;
+  /* Dark theme variables */
+}
+
+/* Component styling with direct CSS properties */
+.component {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 0.5rem;
+  /* Other properties */
+}
+
+/* Theme-specific styling */
+.component:hover {
+  background-color: hsl(var(--accent));
+}
+```
 
 ### Authentication Implementation
 

@@ -371,7 +371,7 @@ export function TaskDetailPopup({
                 open={isOpen} 
                 onOpenChange={handleOpenChange}
             >
-                <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh]">
+                <DialogContent className="sm:max-w-md md:max-w-xl overflow-y-auto max-h-[90vh] dialog-transition">
                     <DialogHeader>
                         <DialogTitle className="flex-1">
                             {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}

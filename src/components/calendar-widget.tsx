@@ -71,7 +71,7 @@ export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop
             >
                 <div className="text-center">{format(day, "d")}</div>
                 {dayEvents.length > 0 && (
-                    <div className="absolute bottom-1 flex gap-0.5">
+                    <div className="absolute bottom-1 flex gap-.5">
                         {/* Event type indicators */}
                         {uniqueTypes.map((type, i) => (
                             <div
@@ -146,7 +146,7 @@ export function CalendarWidget({ selectedDate, onDateSelect, events, onEventDrop
                     nav_button_previous: "hidden",
                     nav_button_next: "hidden",
                     table: "w-full border-collapse overflow-visible",
-                    head_row: "flex w-full overflow-visible",
+                    head_row: "flex w-full mt-2 mb-1 overflow-visible",
                     head_cell: "text-foreground rounded-none w-full font-bold text-[0.75rem] uppercase px-0 mx-0",
                     row: "flex w-full mt-0 mx-0 px-0 overflow-visible",
                     cell: "relative h-9 w-full p-0 mx-0 text-center text-xs focus-within:relative focus-within:z-20",

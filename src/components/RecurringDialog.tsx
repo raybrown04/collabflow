@@ -54,7 +54,7 @@ export function RecurringDialog({ isOpen, onClose, onSetRecurring }: RecurringDi
             open={isOpen} 
             onOpenChange={handleOpenChange}
         >
-            <DialogContent className="sm:max-w-[400px] bg-background text-foreground">
+            <DialogContent className="sm:max-w-[400px] dialog-transition">
                 <DialogHeader>
                     <DialogTitle>Set Recurring</DialogTitle>
                 </DialogHeader>

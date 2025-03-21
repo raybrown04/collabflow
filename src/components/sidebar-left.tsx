@@ -121,7 +121,12 @@ export function SidebarLeft() {
     const menuItemStyle = "max-w-full mx-0 px-2";
 
     return (
-        <Sidebar>
+        <Sidebar
+            style={{
+                zIndex: 10, // Ensure proper stacking with main content
+                width: 'var(--sidebar-expanded-width)' // Use CSS variable for width
+            }}
+        >
             <div className="flex flex-col gap-4 p-4">
                 {/* Company Logo and Branding */}
                 <div className="flex items-center gap-2 border-b pb-4">
@@ -142,6 +147,19 @@ export function SidebarLeft() {
                     >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Overview
+                    </Link>
+                    
+                    <Link
+                        href="/dashboard"
+                        className={cn(
+                            buttonVariants({ variant: "ghost" }),
+                            "justify-start w-full",
+                            menuItemStyle,
+                            pathname === "/dashboard" && "bg-accent text-accent-foreground"
+                        )}
+                    >
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Dashboard
                     </Link>
 
                     {/* Documents link */}

@@ -223,7 +223,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
     }
 
     return (
-        <div className="p-4 rounded-lg">
+        <div className="p-4 rounded-lg bg-background dialog-transition">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Title</label>
@@ -290,7 +290,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 {format(startDate, "PPP")}
                             </Button>
                             {startCalendarOpen && (
-                                <div className="absolute z-10 mt-1 rounded-md border bg-background shadow-md" onClick={(e) => e.stopPropagation()}>
+                                <div className="absolute z-10 mt-1 rounded-md border bg-background dialog-transition shadow-md" onClick={(e) => e.stopPropagation()}>
                                     <Calendar
                                         mode="single"
                                         selected={startDate}
@@ -343,7 +343,7 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                 {format(endDate, "PPP")}
                             </Button>
                             {endCalendarOpen && (
-                                <div className="absolute z-10 mt-1 rounded-md border bg-background shadow-md" onClick={(e) => e.stopPropagation()}>
+                                <div className="absolute z-10 mt-1 rounded-md border bg-background dialog-transition shadow-md" onClick={(e) => e.stopPropagation()}>
                                     <Calendar
                                         mode="single"
                                         selected={endDate}

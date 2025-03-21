@@ -214,7 +214,7 @@ export function TaskMultiSelectPopup({ onComplete }: TaskMultiSelectPopupProps) 
           setIsListDialogOpen(open);
         }, [setIsListDialogOpen])}
       >
-        <DialogContent className="sm:max-w-[400px] bg-white text-black">
+        <DialogContent className="sm:max-w-[400px] bg-background !bg-opacity-100">
           <DialogHeader>
             <DialogTitle>Move to List</DialogTitle>
           </DialogHeader>
@@ -244,7 +244,7 @@ export function TaskMultiSelectPopup({ onComplete }: TaskMultiSelectPopupProps) 
           setIsRecurringDialogOpen(open);
         }, [setIsRecurringDialogOpen])}
       >
-        <DialogContent className="sm:max-w-[400px] bg-white text-black">
+        <DialogContent className="sm:max-w-[400px] bg-background !bg-opacity-100">
           <DialogHeader>
             <DialogTitle>Set Recurring</DialogTitle>
           </DialogHeader>
