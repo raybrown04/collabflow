@@ -25,6 +25,8 @@ function DocumentsLoading() {
   );
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function DocumentsPage() {
   try {
     const cookieStore = await cookies();
