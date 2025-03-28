@@ -43,15 +43,27 @@ export interface EventData {
 }
 
 export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, onCancel, existingEvent, onDelete }: EventFormProps) {
-    // Use today's date as default when adding a new event
-    const today = new Date()
-    
     const [isOpen, setIsOpen] = useState(alwaysShowForm)
     const [title, setTitle] = useState(existingEvent?.title || "")
     const [description, setDescription] = useState(existingEvent?.description || "")
     const [type, setType] = useState<"meeting" | "task" | "reminder">(existingEvent?.type || "meeting") // Keeping for backward compatibility
     const [eventProjects, setEventProjects] = useState<Project[]>(existingEvent?.projects || [])
     const { setSelectedProjects, updateEventProjects } = useEventProjects()
+    
+    // Initialize form with the selected date or existing event date
+    const [startTime, setStartTime] = useState(existingEvent ? format(parseISO(existingEvent.date), "HH:mm") : "12:00")
+    const [endTime, setEndTime] = useState(existingEvent?.end_date ? format(parseISO(existingEvent.end_date), "HH:mm") : "13:00")
+    const [isAllDay, setIsAllDay] = useState(existingEvent?.is_all_day || false)
+    const [startDate, setStartDate] = useState<Date>(existingEvent?.date ? parseISO(existingEvent.date) : selectedDate)
+    const [endDate, setEndDate] = useState<Date>(existingEvent?.end_date ? parseISO(existingEvent.end_date) : selectedDate)
+    
+    // Update dates when selectedDate changes
+    useEffect(() => {
+        if (!existingEvent) {
+            setStartDate(selectedDate);
+            setEndDate(selectedDate);
+        }
+    }, [selectedDate, existingEvent]);
     
     // Initialize selected projects if event has projects
     useEffect(() => {
@@ -60,11 +72,6 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
             setSelectedProjects(existingEvent.projects);
         }
     }, [existingEvent, setSelectedProjects]);
-    const [startTime, setStartTime] = useState(existingEvent ? format(parseISO(existingEvent.date), "HH:mm") : "12:00")
-    const [endTime, setEndTime] = useState(existingEvent?.end_date ? format(parseISO(existingEvent.end_date), "HH:mm") : "13:00")
-    const [isAllDay, setIsAllDay] = useState(existingEvent?.is_all_day || false)
-    const [startDate, setStartDate] = useState<Date>(existingEvent?.date ? parseISO(existingEvent.date) : today)
-    const [endDate, setEndDate] = useState<Date>(existingEvent?.end_date ? parseISO(existingEvent.end_date) : today)
     const [locationData, setLocationData] = useState<LocationData>({
         address: existingEvent?.location || "",
         coordinates: existingEvent?.location_coordinates || undefined
@@ -302,7 +309,6 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                                 setStartCalendarOpen(false);
                                             }
                                         }}
-                                        initialFocus
                                         className="rounded-md"
                                     />
                                 </div>
@@ -355,7 +361,6 @@ export function EventForm({ selectedDate, onEventAdded, alwaysShowForm = false, 
                                                 setEndCalendarOpen(false);
                                             }
                                         }}
-                                        initialFocus
                                         className="rounded-md"
                                     />
                                 </div>

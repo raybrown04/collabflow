@@ -108,13 +108,54 @@ Provides persistent knowledge storage capabilities.
 
 ### 6. 21st Dev Magic MCP Server
 
-Provides UI component generation capabilities.
+Provides UI component generation capabilities based on the 21st.dev design system.
 
 #### Tools
 
 - `21st_magic_component_builder`: Generates UI components based on user requests
+  - Parameters:
+    - `pattern` (required): The component pattern to generate (e.g., 'accordion', 'tabs', 'dropdown')
+    - `options` (optional): Additional configuration options for the component
+  - Returns: Generated component code and usage examples
+
 - `logo_search`: Searches and returns logos in specified format
+  - Parameters:
+    - `query` (required): The search term for the logo
+    - `format` (optional): The desired format (SVG, PNG)
+  - Returns: Logo images matching the search query
+
 - `21st_magic_component_inspiration`: Fetches component inspiration from 21st.dev
+  - Parameters:
+    - `componentType` (required): The type of component to get inspiration for
+  - Returns: Design examples and best practices
+
+#### Usage Examples
+
+```typescript
+// Generate an accordion component
+const accordionComponent = await useMcp('@21st-dev-magic-mcp', '21st_magic_component_builder', {
+  pattern: 'accordion',
+  options: {
+    variant: 'bordered',
+    defaultOpen: true
+  }
+});
+
+// Search for a logo
+const logo = await useMcp('@21st-dev-magic-mcp', 'logo_search', {
+  query: 'windsurf',
+  format: 'svg'
+});
+
+// Get component inspiration
+const inspiration = await useMcp('@21st-dev-magic-mcp', '21st_magic_component_inspiration', {
+  componentType: 'datepicker'
+});
+```
+
+#### Configuration
+
+The 21st Dev Magic MCP Server requires the `TWENTY_FIRST_API_KEY` environment variable to be set in the MCP settings configuration. This key is used to authenticate with the 21st.dev API.
 
 ### 7. Filesystem MCP Server
 

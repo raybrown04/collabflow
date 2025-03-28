@@ -67,13 +67,14 @@ export function DroppableCalendarDay({
             ref={dropRef}
             className={`
                 relative flex h-full w-full flex-col items-center justify-center
-                ${isSelected ? "rounded-full bg-primary text-primary-foreground" : ""}
+                ${isSelected ? "rounded-md bg-primary/10 text-primary font-medium" : ""}
                 ${isActive ? "bg-accent/50" : ""}
                 ${canDrop && !isActive ? "bg-accent/20" : ""}
-                transition-colors duration-200
+                hover:bg-muted/50 transition-colors duration-200
                 ${className || ""}
             `}
             data-date={format(day, "yyyy-MM-dd")}
+            aria-selected={isSelected}
         >
             {children}
 
